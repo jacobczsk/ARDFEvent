@@ -1,0 +1,12 @@
+<!DOCTYPE RCC>
+<RCC version="1.0">
+<qresource>
+    <file>icons/categories.png</file>
+    <file>icons/gear.png</file>
+    <file>icons/import.png</file>
+    <file>icons/readout.png</file>
+    <file>icons/results.png</file>
+    <file>icons/runners.png</file>
+    <file>icons/tx.png</file>
+</qresource>
+</RCC>

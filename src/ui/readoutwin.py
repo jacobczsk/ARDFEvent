@@ -1,0 +1,312 @@
+import time
+from datetime import datetime, timedelta
+
+from escpos.printer import Serial
+from PySide6.QtCore import QThread, Signal
+from PySide6.QtGui import QCloseEvent
+from PySide6.QtWidgets import (
+    QComboBox,
+    QCompleter,
+    QDialog,
+    QFormLayout,
+    QInputDialog,
+    QLineEdit,
+    QMessageBox,
+    QPushButton,
+    QTextBrowser,
+    QVBoxLayout,
+    QWidget,
+)
+from serial.tools.list_ports import comports
+from sportident import SIReaderException, SIReaderReadout
+from sqlalchemy import Delete, Select
+from sqlalchemy.orm import Session
+
+import api
+import results
+from results import format_delta
+from models import Control, Punch, Runner
+
+
+class ReadoutThread(QThread):
+    def __init__(self, parent, si_port) -> None:
+        super().__init__(parent)
+        self.si_port = si_port
+
+    def run(self) -> None:
+        si = SIReaderReadout(self.si_port)
+
+        si.beep(3)
+
+        while True:
+            while not si.poll_sicard():
+                time.sleep(0.01)
+
+            try:
+                data = si.read_sicard()
+                si.ack_sicard()
+                self.parent().on_readout.emit(data)
+
+            except Exception as e:
+                if str(e) != "No card in the device.":
+                    si.beep(2)
+                    self.parent().si_error.emit()
+
+
+class ReadoutWindow(QWidget):
+    on_readout = Signal(dict)
+    si_error = Signal()
+
+    def __init__(self, mw):
+        super().__init__()
+
+        self.mw = mw
+
+        self.proc: ReadoutThread = None
+
+        self.on_readout.connect(self._handle_readout)
+        self.si_error.connect(self._show_si_error)
+
+        lay = QVBoxLayout()
+        self.setLayout(lay)
+
+        portslay = QFormLayout()
+        lay.addLayout(portslay)
+
+        self.siport_edit = QComboBox()
+        portslay.addRow("Port SI readeru", self.siport_edit)
+        self.printer_edit = QComboBox()
+        portslay.addRow("Port tiskárny", self.printer_edit)
+
+        self.log = QTextBrowser()
+        lay.addWidget(self.log)
+
+        startreadout_btn = QPushButton("Spustit/vypnout")
+        startreadout_btn.clicked.connect(self._toggle_readout)
+        lay.addWidget(startreadout_btn)
+
+    def _show_si_error(self):
+        QMessageBox.critical(self, "Chyba", "Zkuste to znovu")
+
+    def _toggle_readout(self):
+        if self.proc:
+            self.proc.terminate()
+            self.proc.wait()
+            self.proc = None
+        else:
+            self.proc = ReadoutThread(self, self.siport_edit.currentText())
+            self.proc.start()
+
+            port = self.printer_edit.currentText()
+            if port != "Netisknout":
+                self.printer = Serial(port)
+                self.printer.charcode("CP852")
+            else:
+                self.printer = None
+
+    def _append_log(self, string: str):
+        self.log.setText(self.log.toPlainText() + string + "\n")
+
+    def _handle_readout(self, data):
+        si_no = data["card_number"]
+
+        self._append_log("---------------------------------")
+        self._append_log(f"Byl vyčten čip {si_no}.")
+
+        sess = Session(self.mw.db)
+        runners = sess.scalars(Select(Runner).where(Runner.si == si_no)).all()
+
+        if len(runners) == 0:
+            all_runners = map(lambda x: x.name, sess.scalars(Select(Runner)).all())
+
+            inpd = QInputDialog()
+            inpd.setWindowTitle("Nepřiřazený čip")
+            inpd.setLabelText("Čip není přiřazen. Zadejte jméno.")
+            inpd.setTextValue("")
+            completer = QCompleter(all_runners, inpd)
+            label: QLineEdit = inpd.findChild(QLineEdit)
+            label.setCompleter(completer)
+
+            ok, name = (
+                inpd.exec() == QDialog.Accepted,
+                inpd.textValue(),
+            )
+            if ok:
+                try:
+                    runner = sess.scalars(
+                        Select(Runner).where(Runner.name == name)
+                    ).one()
+                    runner.si = si_no
+                except:
+                    self._append_log(f"Nenalezeno.")
+                    sess.close()
+                    return
+            else:
+                self._append_log(f"Zrušeno vyčtení.")
+                sess.close()
+                return
+        else:
+            runner = runners[0]
+
+        self._append_log(f"Závodník: {runner.name} ({runner.reg}).")
+
+        if len(sess.scalars(Select(Punch).where(Punch.si == si_no)).all()) != 0:
+            if (
+                QMessageBox.warning(
+                    self,
+                    "Chyba",
+                    f"Čip {si_no} byl již vyčten. Přepsat?",
+                    QMessageBox.StandardButton.Yes,
+                    QMessageBox.StandardButton.No,
+                )
+                == QMessageBox.StandardButton.Yes
+            ):
+                self._append_log(f"Přepsán předchozí zápis.")
+                sess.execute(Delete(Punch).where(Punch.si == si_no))
+            else:
+                self._append_log(f"Zrušeno vyčtení.")
+                sess.close()
+                return
+        for punch in data["punches"]:
+            sess.add(Punch(si=si_no, code=punch[0], time=punch[1]))
+
+        if data["start"]:
+            sess.add(Punch(si=si_no, code=1000, time=data["start"]))
+
+        if data["finish"]:
+            sess.add(Punch(si=si_no, code=1001, time=data["finish"]))
+
+        sess.commit()
+        sess.close()
+
+        self.mw.results_win._update_results()
+
+        if self.printer:
+            print_readout(self.mw.db, si_no, self.printer)
+
+    def _update_ports(self):
+        self.siport_edit.clear()
+        self.printer_edit.clear()
+
+        self.printer_edit.addItem("Netisknout")
+
+        for port in comports():
+            self.siport_edit.addItem(port.device)
+            self.printer_edit.addItem(port.device)
+
+    def show(self):
+        super().show()
+        self._update_ports()
+
+    def closeEvent(self, event: QCloseEvent) -> None:
+        try:
+            self.proc.terminate()
+            self.proc.wait()
+        except:
+            ...
+        super().closeEvent(event)
+
+
+def print_readout(db, si: int, printer: Serial, snura=False):
+    def text(string: str = ""):
+        printer._raw(string.encode("cp852"))
+
+    def line(string: str = ""):
+        text(string + "\n")
+
+    basic_info = api.get_basic_info(db)
+
+    printer.set(align="center", double_height=True)
+    line(basic_info["name"])
+    printer.set(align="center", double_height=False)
+    line(datetime.fromisoformat(basic_info["date_tzero"]).strftime("%d. %m. %Y"))
+    printer.set(align="left")
+    line()
+
+    sess = Session(db)
+
+    runner = sess.scalars(Select(Runner).where(Runner.si == si)).one()
+    punches = list(sess.scalars(Select(Punch).where(Punch.si == si)).all())
+    punches.sort(key=lambda x: x.time)
+
+    start = sess.scalars(
+        Select(Punch).where(Punch.si == si).where(Punch.code == 1000)
+    ).one_or_none()
+    if start:
+        stime: datetime = start.time
+    else:
+        stime: datetime = datetime.now()
+
+    printer.set(bold=True)
+    text(runner.name)
+    printer.set(bold=False)
+    line(f" ({runner.reg})")
+    line(f"Kat.: {runner.category.name}")
+    line(f"Klub: {runner.club}")
+    line(f"SI:   {runner.si}\n")
+
+    lasttime = stime
+
+    printer.set(bold=True)
+    line("Kód\tČas\tMezičas".expandtabs(10))
+    printer.set(bold=False)
+
+    for punch in punches:
+        control = sess.scalars(
+            Select(Control).where(Control.code == punch.code)
+        ).one_or_none()
+        if control:
+            cn_name = f"({punch.code}) {control.name}"
+        elif punch.code == 1000:
+            cn_name = "Start"
+        elif punch.code == 1001:
+            cn_name = "Finish"
+        else:
+            cn_name = punch.code
+        ptime: datetime = punch.time
+        fromstart = ptime - stime
+        split = ptime - lasttime
+
+        line(
+            f"{cn_name}\t{format_delta(fromstart)}\t+{format_delta(split)}".expandtabs(
+                10
+            )
+        )
+
+        lasttime = ptime
+
+    results_cat = results.calculate_category(db, runner.category.name)
+    result = list(filter(lambda x: x.name == runner.name, results_cat))[0]
+
+    line()
+
+    text("Výsledek: ")
+    printer.set(bold=True)
+    line(
+        f"{format_delta(timedelta(seconds=result.time))}, {result.tx} TX, {result.status}\n"
+    )
+    line("Výsledky:")
+    printer.set(bold=False)
+
+    for result_lp in results_cat[:3]:
+        place = f"{result_lp.place}." if result_lp.status == "OK" else "-"
+        printer.set(align="left")
+        line(f"{place} {result_lp.name}")
+        printer.set(align="right")
+        line(f"{format_delta(timedelta(seconds=result_lp.time))}, {result_lp.tx} TX")
+
+    if result.place > 3:
+        printer.set(bold=True)
+        place = f"{result.place}." if result.status == "OK" else "-"
+        printer.set(align="left")
+        line(f"{place} {result.name}")
+        printer.set(align="right")
+        line(f"{format_delta(timedelta(seconds=result.time))}, {result.tx} TX")
+        printer.set(bold=False)
+
+    printer.set(align="center")
+    line("ARDFEvent, (C) Jakub Jiroutek")
+
+    printer.print_and_feed(4)
+
+    sess.close()
