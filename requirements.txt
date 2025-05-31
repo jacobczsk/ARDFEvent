@@ -6,3 +6,4 @@ python_dateutil==2.9.0
 Requests==2.32.3
 sportident==1.2.8
 SQLAlchemy==2.0.37
+aiohttp==3.12.0

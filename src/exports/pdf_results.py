@@ -1,13 +1,14 @@
+import sys
 from datetime import timedelta
 from pathlib import Path
-import sys
 
 from dateutil.parser import parser
 from fpdf import FPDF
 from sqlalchemy import Engine, Select
 from sqlalchemy.orm import Session
 
-import api, results
+import api
+import results
 from models import Category
 
 
@@ -97,7 +98,7 @@ class PDF(FPDF):
         def _get_table_widths(data):
             widths = []
             for row in data:
-                if len(row) == 2:
+                if len(row) == 2 or row[0] == "SPLITS":
                     continue
                 for i, item in enumerate(row):
                     if i >= len(widths):
@@ -113,10 +114,21 @@ class PDF(FPDF):
 
         for row in data:
             if len(row) == 2:
+                self.ln()
                 self.set_font("DejaVu", "B", 14)
                 self.cell(self.get_string_width(row[0]) + 6, 6, row[0], 0)
                 self.set_font("DejaVu", "B", 12)
                 self.cell(0, 6, row[1], 0)
+                self.ln()
+            elif row[0] == "SPLITS":
+                self.cell(10, 6, "", 0)
+                for i, x in enumerate(row[1:]):
+                    if i % 2 == 0:
+                        self.set_font("DejaVu", "B", 8)
+                        self.cell(7, 6, x, 0)
+                    else:
+                        self.set_font("DejaVu", "", 8)
+                        self.cell(17, 6, x, 0)
                 self.ln()
             else:
                 self.set_font("DejaVu", "", 10)
@@ -144,15 +156,33 @@ def export(filename, db):
             else:
                 place = f"{person.place}."
 
+            if person.start is not None:
+                start = person.start
+
+            splits0 = []
+            splits1 = []
+            last = start
+
+            for control in person.order:
+                splits0.append(control[0])
+                splits0.append(results.format_delta(control[1] - start))
+                splits1.append("")
+                splits1.append("+" + results.format_delta(control[1] - last))
+                last = control[1]
+
             data.append(
                 [
                     place,
                     person.name,
                     f"{person.tx} TX",
-                    " - ".join(person.order),
                     results.format_delta(timedelta(seconds=person.time)),
                 ]
             )
+            if not len(splits0) + len(splits1) == 0:
+                data.append(["SPLITS"] + splits0)
+                data.append(["SPLITS"] + splits1)
+
+    sess.close()
 
     pdf.table(data)
 

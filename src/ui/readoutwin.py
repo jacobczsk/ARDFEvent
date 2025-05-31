@@ -1,6 +1,9 @@
+import csv
+import io
 import time
 from datetime import datetime, timedelta
 
+import requests
 from escpos.printer import Serial
 from PySide6.QtCore import QThread, Signal
 from PySide6.QtGui import QCloseEvent
@@ -18,14 +21,14 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 from serial.tools.list_ports import comports
-from sportident import SIReaderException, SIReaderReadout
+from sportident import SIReaderReadout
 from sqlalchemy import Delete, Select
 from sqlalchemy.orm import Session
 
 import api
 import results
-from results import format_delta
 from models import Control, Punch, Runner
+from results import format_delta
 
 
 class ReadoutThread(QThread):
@@ -97,12 +100,7 @@ class ReadoutWindow(QWidget):
             self.proc = ReadoutThread(self, self.siport_edit.currentText())
             self.proc.start()
 
-            port = self.printer_edit.currentText()
-            if port != "Netisknout":
-                self.printer = Serial(port)
-                self.printer.charcode("CP852")
-            else:
-                self.printer = None
+            self.port = self.printer_edit.currentText()
 
     def _append_log(self, string: str):
         self.log.setText(self.log.toPlainText() + string + "\n")
@@ -180,9 +178,10 @@ class ReadoutWindow(QWidget):
         sess.close()
 
         self.mw.results_win._update_results()
+        send_online_readout(self.mw.db, si_no)
 
-        if self.printer:
-            print_readout(self.mw.db, si_no, self.printer)
+        if self.port != "Netisknout":
+            print_readout(self.mw.db, si_no, self.port)
 
     def _update_ports(self):
         self.siport_edit.clear()
@@ -190,7 +189,7 @@ class ReadoutWindow(QWidget):
 
         self.printer_edit.addItem("Netisknout")
 
-        for port in comports():
+        for port in comports()[::-1]:
             self.siport_edit.addItem(port.device)
             self.printer_edit.addItem(port.device)
 
@@ -207,7 +206,49 @@ class ReadoutWindow(QWidget):
         super().closeEvent(event)
 
 
-def print_readout(db, si: int, printer: Serial, snura=False):
+def send_online_readout(db, si: int):
+    sess = Session(db)
+    runner = sess.scalars(Select(Runner).where(Runner.si == si)).one()
+
+    results_cat = results.calculate_category(db, runner.category.name)
+
+    sio = io.StringIO()
+    writer = csv.writer(sio, delimiter=";", quoting=csv.QUOTE_MINIMAL)
+
+    for result in results_cat:
+        order = ""
+        last = result.start
+        for punch in result.order:
+            order += f"{punch[0]},CONTROL,OK,{results.format_delta(punch[1] - last)}#"
+            last = punch[1]
+        if result.finish:
+            order += f"F,FINISH,OK,{results.format_delta(result.finish - last)}"
+        writer.writerow(
+            [
+                result.reg,
+                result.si,
+                result.name.split(" ")[0],
+                " ".join(result.name.split(" ")[1:]),
+                results.format_delta(timedelta(seconds=result.time)),
+                result.place,
+                result.tx,
+                result.status,
+                order,
+            ]
+        )
+
+    sess.close()
+
+    requests.put(
+        "https://rob-is.cz/api/results/?name=csv",
+        data=sio.getvalue().encode("utf-8"),
+        headers={"Race-Api-Key": api.get_basic_info(db)["robis_api"]},
+    )
+
+
+def print_readout(db, si: int, port: str, snura=False):
+    printer = Serial(port)
+
     def text(string: str = ""):
         printer._raw(string.encode("cp852"))
 
@@ -232,18 +273,29 @@ def print_readout(db, si: int, printer: Serial, snura=False):
     start = sess.scalars(
         Select(Punch).where(Punch.si == si).where(Punch.code == 1000)
     ).one_or_none()
-    if start:
-        stime: datetime = start.time
-    else:
-        stime: datetime = datetime.now()
 
     printer.set(bold=True)
     text(runner.name)
     printer.set(bold=False)
     line(f" ({runner.reg})")
-    line(f"Kat.: {runner.category.name}")
-    line(f"Klub: {runner.club}")
-    line(f"SI:   {runner.si}\n")
+    line(f"Kat.:  {runner.category.name}")
+    line(f"Klub:  {runner.club}")
+    line(f"SI:    {runner.si}")
+
+    startovka = None
+
+    if runner.startlist_time:
+        startovka = runner.startlist_time
+        line(f"Start: {startovka.strftime('%H:%M:%S')}")
+
+    line("")
+
+    if start:
+        stime: datetime = start.time
+    elif startovka:
+        stime: datetime = startovka
+    else:
+        stime: datetime = None
 
     lasttime = stime
 
@@ -262,7 +314,7 @@ def print_readout(db, si: int, printer: Serial, snura=False):
         elif punch.code == 1001:
             cn_name = "Finish"
         else:
-            cn_name = punch.code
+            cn_name = f"({punch.code}) N/A"
         ptime: datetime = punch.time
         fromstart = ptime - stime
         split = ptime - lasttime
@@ -308,5 +360,5 @@ def print_readout(db, si: int, printer: Serial, snura=False):
     line("ARDFEvent, (C) Jakub Jiroutek")
 
     printer.print_and_feed(4)
-
+    printer.close()
     sess.close()

@@ -73,6 +73,7 @@ class ControlsWindow(QWidget):
         sess.execute(Delete(Control))
         sess.add_all(controls)
         sess.commit()
+        sess.close()
 
     def _preset_slow(self):
         self._set_controls(

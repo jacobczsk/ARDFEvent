@@ -12,7 +12,7 @@ BI_TEMPLATE = {
     "organizer": "ORG",
     "limit": "LIMIT",
     "band": "BAND",
-    "nereg": "NEREG",
+    "robis_api": "ROBIS_API",
 }
 
 BANDS = ["2m", "80m", "kombinované"]

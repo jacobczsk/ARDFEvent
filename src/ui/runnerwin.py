@@ -1,3 +1,7 @@
+import time
+from datetime import timedelta
+
+from escpos.printer import Serial
 from PySide6.QtCore import QStringListModel, Qt
 from PySide6.QtWidgets import (
     QComboBox,
@@ -10,17 +14,17 @@ from PySide6.QtWidgets import (
     QListWidgetItem,
     QPushButton,
     QSpinBox,
+    QTimeEdit,
     QVBoxLayout,
     QWidget,
 )
-from ui.readoutwin import print_readout
-from escpos.printer import Serial
 from serial.tools.list_ports import comports
 from sqlalchemy import Delete, Select
 from sqlalchemy.orm import Session
 
 import api
 from models import Category, Runner
+from ui.readoutwin import print_readout
 
 
 class RunnerWindow(QWidget):
@@ -81,6 +85,10 @@ class RunnerWindow(QWidget):
         self.category_edit = QComboBox()
         details_lay.addRow("Kategorie", self.category_edit)
 
+        self.starttime_edit = QTimeEdit()
+        self.starttime_edit.setDisplayFormat("HH:mm:ss")
+        details_lay.addRow("Start dle startovky", self.starttime_edit)
+
         print_btn = QPushButton("Vytiknout výčet")
         print_btn.clicked.connect(self._print_readout)
         details_lay.addWidget(print_btn)
@@ -119,6 +127,10 @@ class RunnerWindow(QWidget):
             runner.si = self.SI_edit.text()
             runner.reg = self.reg_edit.text()
             runner.call = self.call_edit.text()
+            if self.starttime_edit.isEnabled():
+                runner.startlist_time = (
+                    self.starttime_edit.dateTime().toPython().astimezone()
+                )
 
             category = sess.scalars(
                 Select(Category).where(
@@ -149,12 +161,23 @@ class RunnerWindow(QWidget):
             self.SI_edit.setValue(runner.si)
             self.reg_edit.setText(runner.reg)
             self.call_edit.setText(runner.call)
+            if runner.startlist_time:
+                self.starttime_edit.setDisabled(False)
+                self.starttime_edit.setDateTime(
+                    runner.startlist_time
+                    + timedelta(seconds=-time.timezone)
+                    + timedelta(hours=(1 if time.daylight else 0))
+                )
+            else:
+                self.starttime_edit.setDisabled(True)
+
             self.category_edit.setCurrentIndex(
                 self.category_indexes[runner.category.name]
             )
 
             self.selected = runner.id
-
+        else:
+            raise ValueError("Runner not found")
         sess.close()
 
     def _update_runners_cats(self):
@@ -192,26 +215,27 @@ class RunnerWindow(QWidget):
         sess.close()
 
     def _new_runner(self):
-        nereg = int(api.get_basic_info(self.mw.db)["nereg"] or 0)
-        sess = Session(self.mw.db)
-        category = sess.scalars(Select(Category)).first()
-        sess.add(
-            Runner(
-                name=f"Nový závodník {nereg}",
+        try:
+            self._select("")
+        except:
+            sess = Session(self.mw.db)
+            runner = Runner(
+                name=f"",
                 club="",
                 si=0,
-                reg=f"NNN{nereg:04}",
+                reg=f"",
                 call="",
-                category=category,
+                category=sess.scalars(Select(Category)).first(),
+                startlist_time=None,
             )
-        )
+            sess.add(runner)
 
-        sess.commit()
-        sess.close()
+            sess.commit()
+            sess.close()
 
-        self._update_runners_cats()
+            self._select("")
 
-        api.set_basic_info(self.mw.db, {"nereg": nereg + 1})
+            self._update_runners_cats()
 
     def _delete_runner(self):
         sess = Session(self.mw.db)
@@ -219,7 +243,11 @@ class RunnerWindow(QWidget):
         sess.commit()
 
         self._update_runners_cats()
-        self._select(self.runners_list.item(0).text())
+        if self.runners_list.item(0):
+            self._select(self.runners_list.item(0).text())
+        else:
+            self._new_runner()
+        sess.close()
 
     def _print_readout(self):
         sess = Session(self.mw.db)
@@ -229,11 +257,11 @@ class RunnerWindow(QWidget):
 
         if runner:
             inpd = QInputDialog()
-            inpd.setComboBoxItems([p.device for p in comports()])
+            inpd.setComboBoxItems([p.device for p in comports()[::-1]])
             inpd.setLabelText("Vyberte port tiskárny")
             inpd.setWindowTitle("Tisk")
             if inpd.exec() == QInputDialog.DialogCode.Accepted:
-                print_readout(self.mw.db, runner.si, Serial(inpd.textValue()))
+                print_readout(self.mw.db, runner.si, inpd.textValue())
 
         sess.close()
 

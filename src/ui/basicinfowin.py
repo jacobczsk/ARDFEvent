@@ -35,11 +35,15 @@ class BasicInfoWindow(QWidget):
         lay.addRow("Pořadatel", self.org_edit)
 
         self.limit_edit = QSpinBox()
+        self.limit_edit.setRange(0, 10000)
         lay.addRow("Limit", self.limit_edit)
 
         self.band_select = QComboBox()
         self.band_select.addItems(api.BANDS)
         lay.addRow("Pásmo", self.band_select)
+
+        self.api_edit = QLineEdit()
+        lay.addRow("ROBis API klíč", self.api_edit)
 
         ok_btn = QPushButton("OK")
         ok_btn.clicked.connect(self._on_ok)
@@ -54,6 +58,7 @@ class BasicInfoWindow(QWidget):
                 "organizer": self.org_edit.text(),
                 "limit": str(self.limit_edit.value()),
                 "band": self.band_select.currentText(),
+                "robis_api": self.api_edit.text(),
             },
         )
         self.close()
@@ -74,6 +79,9 @@ class BasicInfoWindow(QWidget):
 
         if basic_info["limit"]:
             self.limit_edit.setValue(int(basic_info["limit"]))
+
+        if basic_info["robis_api"]:
+            self.api_edit.setText(basic_info["robis_api"])
 
         if basic_info["band"] in api.BANDS:
             self.band_select.setCurrentIndex(api.BANDS.index(basic_info["band"]))

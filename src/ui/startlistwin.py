@@ -1,6 +1,5 @@
 from datetime import timedelta
 
-import requests
 from PySide6.QtWidgets import (
     QFileDialog,
     QPushButton,
@@ -12,14 +11,12 @@ from PySide6.QtWidgets import (
 from sqlalchemy import Select
 from sqlalchemy.orm import Session
 
-import api
-import exports.json_results as res_json
 import exports.pdf_results as res_pdf
 import results
 from models import Category
 
 
-class ResultsWindow(QWidget):
+class StartlistWindow(QWidget):
     def __init__(self, mw):
         super().__init__()
 
@@ -32,25 +29,9 @@ class ResultsWindow(QWidget):
         export_pdf_btn.clicked.connect(self._export_pdf)
         lay.addWidget(export_pdf_btn)
 
-        robis_btn = QPushButton("Nahrát na ROBis")
-        robis_btn.clicked.connect(self._upload_robis)
-        lay.addWidget(robis_btn)
-
         self.results_table = QTableWidget()
         self.results_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         lay.addWidget(self.results_table)
-
-    def _upload_robis(self):
-        response = requests.post(
-            "https://rob-is.cz/api/results/?valid=True",
-            res_json.export(self.mw.db),
-            headers={
-                "Race-Api-Key": api.get_basic_info(self.mw.db)["robis_api"],
-                "Content-Type": "application/json",
-            },
-        )
-
-        print(response.status_code, response.text)
 
     def _export_pdf(self):
         res_pdf.export(
@@ -97,9 +78,7 @@ class ResultsWindow(QWidget):
                 self.results_table.setItem(row, 1, QTableWidgetItem(person.name))
                 self.results_table.setItem(row, 2, QTableWidgetItem(f"{person.tx} TX"))
                 self.results_table.setItem(
-                    row,
-                    3,
-                    QTableWidgetItem(" - ".join(map(lambda x: x[0], person.order))),
+                    row, 3, QTableWidgetItem(" - ".join(person.order))
                 )
                 self.results_table.setItem(
                     row,

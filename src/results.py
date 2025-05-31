@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from sqlalchemy import Engine, Select
 from sqlalchemy.orm import Session
@@ -8,13 +8,28 @@ from models import Category, Punch
 
 
 class Result:
-    def __init__(self, name: str, tx: int, time: int, status: str, order: list):
+    def __init__(
+        self,
+        name: str,
+        reg: str,
+        si: int,
+        tx: int,
+        time: int,
+        status: str,
+        order: list,
+        start: datetime | None = None,
+        finish: datetime | None = None,
+    ):
         self.name = name
+        self.reg = reg
+        self.si = si
         self.tx = tx
         self.time = time
         self.status = status
         self.order = order
         self.place = 0
+        self.start = start
+        self.finish = finish
 
 
 def calculate_category(db: Engine, name: str):
@@ -36,14 +51,16 @@ def calculate_category(db: Engine, name: str):
 
         tx = 0
         mandatory_cnt = 0
-        start = None
+        start = runner.startlist_time
         finish = None
 
         punches = sess.scalars(Select(Punch).where(Punch.si == runner.si)).all()
         order = []
 
         if len(punches) == 0:
-            results.append(Result(runner.name, 0, 0, "DNS", order))
+            results.append(
+                Result(runner.name, runner.reg, runner.si, 0, 0, "DNS", order)
+            )
             continue
 
         for punch in punches:
@@ -54,7 +71,7 @@ def calculate_category(db: Engine, name: str):
             elif punch.code in loc_controls:
                 tx += 1
                 control = list(filter(lambda c: c.code == punch.code, controls))
-                order.append(control[0].name)
+                order.append((control[0].name, punch.time))
             else:
                 continue
 
@@ -84,7 +101,19 @@ def calculate_category(db: Engine, name: str):
         elif time > limit * 60:
             status = "OVT"
 
-        results.append(Result(runner.name, tx, time, status, order))
+        results.append(
+            Result(
+                runner.name,
+                runner.reg,
+                runner.si,
+                tx,
+                time,
+                status,
+                order,
+                start,
+                finish,
+            )
+        )
 
     ok = filter(lambda x: x.status == "OK", results)
     nok = list(filter(lambda x: x.status != "OK", results))
@@ -123,6 +152,8 @@ def calculate_category(db: Engine, name: str):
         final_results += ok_dict[key]
 
     final_results += nok
+
+    sess.close()
 
     return final_results
 

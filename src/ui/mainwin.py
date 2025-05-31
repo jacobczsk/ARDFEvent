@@ -6,8 +6,8 @@ import requests
 import sqlalchemy
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
-    QInputDialog,
     QGridLayout,
+    QInputDialog,
     QLineEdit,
     QMainWindow,
     QMessageBox,
@@ -26,6 +26,7 @@ from ui import (
     readoutwin,
     resultswin,
     runnerwin,
+    startlistdrawwin,
 )
 
 
@@ -52,7 +53,9 @@ class MainWindow(QMainWindow):
             ):
                 open(self.fn, "w+").close()
 
-        self.db = sqlalchemy.create_engine(f"sqlite:////{self.fn.absolute()}/")
+        self.db = sqlalchemy.create_engine(
+            f"sqlite:////{self.fn.absolute()}/", max_overflow=-1
+        )
         models.Base.metadata.create_all(self.db)
 
         self.basicinfo_win = basicinfowin.BasicInfoWindow(self)
@@ -62,6 +65,7 @@ class MainWindow(QMainWindow):
         self.runners_win = runnerwin.RunnerWindow(self)
         self.readout_win = readoutwin.ReadoutWindow(self)
         self.results_win = resultswin.ResultsWindow(self)
+        self.startlistdraw_win = startlistdrawwin.StartlistDrawWindow(self)
 
         self.windows = [
             self.basicinfo_win,
@@ -71,6 +75,7 @@ class MainWindow(QMainWindow):
             self.runners_win,
             self.readout_win,
             self.results_win,
+            self.startlistdraw_win,
         ]
 
         mainwid = QWidget()
@@ -113,6 +118,11 @@ class MainWindow(QMainWindow):
         results_btn.setIcon(QIcon(":/icons/results.png"))
         results_btn.clicked.connect(self.results_win.show)
         lay.addWidget(results_btn, 2, 0)
+
+        results_btn = QPushButton("Losování startovky")
+        results_btn.setIcon(QIcon(":/icons/results.png"))
+        results_btn.clicked.connect(self.startlistdraw_win.show)
+        lay.addWidget(results_btn, 2, 1)
 
         lay.setColumnStretch(3, 1)
         lay.setRowStretch(3, 1)

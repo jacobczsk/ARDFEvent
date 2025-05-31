@@ -87,6 +87,7 @@ class CategoriesWindow(QWidget):
 
         self._update_categories()
         self._select(self.categories_list.item(0))
+        sess.close()
 
     def _update_categories(self):
         self.categories_list.clear()
