@@ -3,6 +3,7 @@ from datetime import timedelta
 import requests
 from PySide6.QtWidgets import (
     QFileDialog,
+    QHeaderView,
     QPushButton,
     QTableWidget,
     QTableWidgetItem,
@@ -65,6 +66,9 @@ class ResultsWindow(QWidget):
         categories = sess.scalars(Select(Category).order_by(Category.name.asc())).all()
 
         self.results_table.clear()
+        self.results_table.horizontalHeader().setSectionResizeMode(
+            QHeaderView.ResizeMode.ResizeToContents
+        )
         self.results_table.setColumnCount(5)
         self.results_table.setRowCount(1000)
 
@@ -114,10 +118,8 @@ class ResultsWindow(QWidget):
 
         sess.close()
 
-    def show(self):
+    def _show(self):
         self._update_results()
-
-        super().show()
 
         self.results_table.horizontalHeader().hide()
         self.results_table.verticalHeader().hide()

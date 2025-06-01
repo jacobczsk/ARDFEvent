@@ -63,7 +63,7 @@ class BasicInfoWindow(QWidget):
         )
         self.close()
 
-    def show(self):
+    def _show(self):
         basic_info = api.get_basic_info(self.mw.db)
 
         if basic_info["name"]:
@@ -85,5 +85,3 @@ class BasicInfoWindow(QWidget):
 
         if basic_info["band"] in api.BANDS:
             self.band_select.setCurrentIndex(api.BANDS.index(basic_info["band"]))
-
-        super().show()

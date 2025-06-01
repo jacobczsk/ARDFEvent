@@ -185,8 +185,6 @@ class CategoriesWindow(QWidget):
 
         self._select(QListWidgetItem(name))
 
-    def show(self):
-        super().show()
-
+    def _show(self):
         self._update_categories()
         self._select(self.categories_list.item(0))

@@ -8,11 +8,12 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from sqlalchemy.orm import Session
 from sqlalchemy import Delete, Select
+from sqlalchemy.orm import Session
 
-import api, import_runners
-from models import Runner, Category
+import api
+import import_runners
+from models import Category, Runner
 
 
 class ImportWindow(QWidget):
@@ -80,6 +81,5 @@ class ImportWindow(QWidget):
                         f"/!\\ WAR: Závodník {runner.name} nemá platný klub {runner.reg[:3]}. Přesto se importuje."
                     )
 
-    def show(self):
-        super().show()
+    def _show(self):
         self.log.setPlainText("")

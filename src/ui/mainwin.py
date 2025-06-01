@@ -12,7 +12,7 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QMessageBox,
     QPushButton,
-    QVBoxLayout,
+    QTabWidget,
     QWidget,
 )
 
@@ -27,6 +27,7 @@ from ui import (
     resultswin,
     runnerwin,
     startlistdrawwin,
+    startlistwin,
 )
 
 
@@ -58,6 +59,8 @@ class MainWindow(QMainWindow):
         )
         models.Base.metadata.create_all(self.db)
 
+        self.setWindowTitle(f"ARDFEvent - {name}")
+
         self.basicinfo_win = basicinfowin.BasicInfoWindow(self)
         self.controls_win = controlswin.ControlsWindow(self)
         self.categories_win = categorieswin.CategoriesWindow(self)
@@ -65,7 +68,7 @@ class MainWindow(QMainWindow):
         self.runners_win = runnerwin.RunnerWindow(self)
         self.readout_win = readoutwin.ReadoutWindow(self)
         self.results_win = resultswin.ResultsWindow(self)
-        self.startlistdraw_win = startlistdrawwin.StartlistDrawWindow(self)
+        self.startlist_win = startlistwin.StartlistWindow(self)
 
         self.windows = [
             self.basicinfo_win,
@@ -75,59 +78,43 @@ class MainWindow(QMainWindow):
             self.runners_win,
             self.readout_win,
             self.results_win,
-            self.startlistdraw_win,
+            self.startlist_win,
         ]
 
-        mainwid = QWidget()
-        self.setCentralWidget(mainwid)
+        self.mainwid = QTabWidget()
+        self.setCentralWidget(self.mainwid)
+        self.mainwid.currentChanged.connect(self._on_tab_changed)
 
-        lay = QGridLayout()
-        mainwid.setLayout(lay)
+        self.mainwid.addTab(self.basicinfo_win, "Základní info")
+        self.mainwid.setTabIcon(0, QIcon(":/icons/gear.png"))
 
-        basicinfo_btn = QPushButton("Základní info")
-        basicinfo_btn.setIcon(QIcon(":/icons/gear.png"))
-        basicinfo_btn.clicked.connect(self.basicinfo_win.show)
-        lay.addWidget(basicinfo_btn, 0, 0)
+        self.mainwid.addTab(self.controls_win, "Kontroly")
+        self.mainwid.setTabIcon(1, QIcon(":/icons/tx.png"))
 
-        controls_btn = QPushButton("Kontroly")
-        controls_btn.setIcon(QIcon(":/icons/tx.png"))
-        controls_btn.clicked.connect(self.controls_win.show)
-        lay.addWidget(controls_btn, 0, 1)
+        self.mainwid.addTab(self.categories_win, "Kategorie")
+        self.mainwid.setTabIcon(2, QIcon(":/icons/categories.png"))
 
-        categories_btn = QPushButton("Kategorie")
-        categories_btn.setIcon(QIcon(":/icons/categories.png"))
-        categories_btn.clicked.connect(self.categories_win.show)
-        lay.addWidget(categories_btn, 0, 2)
+        self.mainwid.addTab(self.import_win, "Import")
+        self.mainwid.setTabIcon(3, QIcon(":/icons/import.png"))
 
-        import_btn = QPushButton("Import")
-        import_btn.setIcon(QIcon(":/icons/import.png"))
-        import_btn.clicked.connect(self.import_win.show)
-        lay.addWidget(import_btn, 1, 0)
+        self.mainwid.addTab(self.runners_win, "Běžci")
+        self.mainwid.setTabIcon(4, QIcon(":/icons/runners.png"))
 
-        runners_btn = QPushButton("Běžci")
-        runners_btn.setIcon(QIcon(":/icons/runners.png"))
-        runners_btn.clicked.connect(self.runners_win.show)
-        lay.addWidget(runners_btn, 1, 1)
+        self.mainwid.addTab(self.readout_win, "Vyčítání")
+        self.mainwid.setTabIcon(5, QIcon(":/icons/readout.png"))
 
-        readout_btn = QPushButton("Vyčítání")
-        readout_btn.setIcon(QIcon(":/icons/readout.png"))
-        readout_btn.clicked.connect(self.readout_win.show)
-        lay.addWidget(readout_btn, 1, 2)
+        self.mainwid.addTab(self.startlist_win, "Startovka")
+        # results_btn.setIcon(QIcon(":/icons/startlist.png"))
 
-        results_btn = QPushButton("Výsledky")
-        results_btn.setIcon(QIcon(":/icons/results.png"))
-        results_btn.clicked.connect(self.results_win.show)
-        lay.addWidget(results_btn, 2, 0)
+        self.mainwid.addTab(self.results_win, "Výsledky")
+        self.mainwid.setTabIcon(7, QIcon(":/icons/results.png"))
 
-        results_btn = QPushButton("Losování startovky")
-        results_btn.setIcon(QIcon(":/icons/results.png"))
-        results_btn.clicked.connect(self.startlistdraw_win.show)
-        lay.addWidget(results_btn, 2, 1)
+        self.mainwid.setTabPosition(QTabWidget.TabPosition.North)
 
-        lay.setColumnStretch(3, 1)
-        lay.setRowStretch(3, 1)
+        self.showMaximized()
 
-        self.show()
+    def _on_tab_changed(self, index):
+        self.mainwid.currentWidget()._show()
 
     def closeEvent(self, event):
         super().closeEvent(event)

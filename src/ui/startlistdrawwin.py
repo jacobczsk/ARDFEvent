@@ -31,8 +31,10 @@ class StartlistDrawWindow(QWidget):
         self.edits = {}
 
     def show(self):
+        self._show()
         super().show()
 
+    def _show(self):
         for edit in self.edits.values():
             self.mainlay.removeRow(edit)
 
@@ -62,12 +64,31 @@ class StartlistDrawWindow(QWidget):
                 sess.scalars(Select(Runner).where(Runner.category == cat)).all()
             )
 
-            random.shuffle(runners)
+            clubs_dict = {}
+
+            for runner in runners:
+                if runner.club not in clubs_dict:
+                    clubs_dict[runner.club] = [runner]
+                else:
+                    clubs_dict[runner.club].append(runner)
+
+            clubs = list(clubs_dict.values())
+
+            clubs.sort(key=len, reverse=True)
 
             cat_zero = self.edits[cat_name].dateTime().toPython()
 
-            for i, runner in enumerate(runners):
-                runner.startlist_time = cat_zero + baseint_delta * i
+            i = 0
+            while len(clubs) != 0:
+                for club in clubs:
+                    random.shuffle(club)
+                    club[0].startlist_time = cat_zero + baseint_delta * i
+                    club.pop(0)
+                    i += 1
+                while [] in clubs:
+                    clubs.remove([])
 
         sess.commit()
         sess.close()
+
+        self.mw.startlist_win._update_startlist()

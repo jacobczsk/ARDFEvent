@@ -89,7 +89,7 @@ class RunnerWindow(QWidget):
         self.starttime_edit.setDisplayFormat("HH:mm:ss")
         details_lay.addRow("Start dle startovky", self.starttime_edit)
 
-        print_btn = QPushButton("Vytiknout výčet")
+        print_btn = QPushButton("Vytisknout výčet")
         print_btn.clicked.connect(self._print_readout)
         details_lay.addWidget(print_btn)
 
@@ -215,6 +215,8 @@ class RunnerWindow(QWidget):
         sess.close()
 
     def _new_runner(self):
+        if not self.runners_list.count() == 0:
+            self._save_runner()
         try:
             self._select("")
         except:
@@ -265,9 +267,7 @@ class RunnerWindow(QWidget):
 
         sess.close()
 
-    def show(self):
-        super().show()
-
+    def _show(self):
         self._update_runners_cats()
         try:
             self._select(self.runners_list.item(0).text())

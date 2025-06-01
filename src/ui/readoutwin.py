@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
     QDialog,
     QFormLayout,
     QInputDialog,
+    QLabel,
     QLineEdit,
     QMessageBox,
     QPushButton,
@@ -37,28 +38,32 @@ class ReadoutThread(QThread):
         self.si_port = si_port
 
     def run(self) -> None:
-        si = SIReaderReadout(self.si_port)
+        try:
+            si = SIReaderReadout(self.si_port)
 
-        si.beep(3)
+            si.beep(3)
 
-        while True:
-            while not si.poll_sicard():
-                time.sleep(0.01)
+            while True:
+                while not si.poll_sicard():
+                    time.sleep(0.01)
 
-            try:
-                data = si.read_sicard()
-                si.ack_sicard()
-                self.parent().on_readout.emit(data)
+                try:
+                    data = si.read_sicard()
+                    si.ack_sicard()
+                    self.parent().on_readout.emit(data)
 
-            except Exception as e:
-                if str(e) != "No card in the device.":
-                    si.beep(2)
-                    self.parent().si_error.emit()
+                except Exception as e:
+                    if str(e) != "No card in the device.":
+                        si.beep(2)
+                        self.parent().si_error.emit()
+        except Exception as e:
+            self.parent().thr_err.emit(e.__str__())
 
 
 class ReadoutWindow(QWidget):
     on_readout = Signal(dict)
     si_error = Signal()
+    thr_err = Signal(str)
 
     def __init__(self, mw):
         super().__init__()
@@ -69,12 +74,17 @@ class ReadoutWindow(QWidget):
 
         self.on_readout.connect(self._handle_readout)
         self.si_error.connect(self._show_si_error)
+        self.thr_err.connect(self._proc_stopped)
 
         lay = QVBoxLayout()
         self.setLayout(lay)
 
         portslay = QFormLayout()
         lay.addLayout(portslay)
+
+        self.state_label = QLabel("Stav: Neaktivní")
+        lay.addWidget(self.state_label)
+        self.state_label.setStyleSheet("color: red;")
 
         self.siport_edit = QComboBox()
         portslay.addRow("Port SI readeru", self.siport_edit)
@@ -98,9 +108,22 @@ class ReadoutWindow(QWidget):
             self.proc = None
         else:
             self.proc = ReadoutThread(self, self.siport_edit.currentText())
+            self.proc.started.connect(self._proc_running)
+            self.proc.finished.connect(self._proc_stopped)
             self.proc.start()
 
             self.port = self.printer_edit.currentText()
+
+    def _proc_running(self):
+        self.state_label.setText("Stav: Aktivní")
+        self.state_label.setStyleSheet("color: green;")
+
+    def _proc_stopped(self, msg=None):
+        self.state_label.setText("Stav: Neaktivní")
+        self.state_label.setStyleSheet("color: red;")
+        self.log.setText(
+            self.log.toPlainText() + msg + "\n" if msg else "Čtení ukončeno.\n"
+        )
 
     def _append_log(self, string: str):
         self.log.setText(self.log.toPlainText() + string + "\n")
@@ -184,6 +207,9 @@ class ReadoutWindow(QWidget):
             print_readout(self.mw.db, si_no, self.port)
 
     def _update_ports(self):
+        oldportsi = self.siport_edit.currentText()
+        oldportprinter = self.printer_edit.currentText()
+
         self.siport_edit.clear()
         self.printer_edit.clear()
 
@@ -193,8 +219,16 @@ class ReadoutWindow(QWidget):
             self.siport_edit.addItem(port.device)
             self.printer_edit.addItem(port.device)
 
-    def show(self):
-        super().show()
+        if self.proc != None:
+            idx_si = self.siport_edit.findData(oldportsi)
+            if idx_si != -1:
+                self.siport_edit.setCurrentIndex(idx_si)
+
+            idx_printer = self.printer_edit.findData(oldportprinter)
+            if idx_printer != -1:
+                self.printer_edit.setCurrentIndex(idx_printer)
+
+    def _show(self):
         self._update_ports()
 
     def closeEvent(self, event: QCloseEvent) -> None:

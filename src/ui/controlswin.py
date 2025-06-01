@@ -203,7 +203,5 @@ class ControlsWindow(QWidget):
 
         sess.close()
 
-    def show(self):
-        super().show()
-
+    def _show(self):
         self._update_table()

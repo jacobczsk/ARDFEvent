@@ -1,7 +1,6 @@
-from datetime import timedelta
-
 from PySide6.QtWidgets import (
     QFileDialog,
+    QHeaderView,
     QPushButton,
     QTableWidget,
     QTableWidgetItem,
@@ -11,9 +10,9 @@ from PySide6.QtWidgets import (
 from sqlalchemy import Select
 from sqlalchemy.orm import Session
 
-import exports.pdf_results as res_pdf
-import results
-from models import Category
+import exports.pdf_startlist as stl_pdf
+from models import Category, Runner
+from ui import startlistdrawwin
 
 
 class StartlistWindow(QWidget):
@@ -21,6 +20,7 @@ class StartlistWindow(QWidget):
         super().__init__()
 
         self.mw = mw
+        self.sldw = startlistdrawwin.StartlistDrawWindow(self.mw)
 
         lay = QVBoxLayout()
         self.setLayout(lay)
@@ -29,25 +29,32 @@ class StartlistWindow(QWidget):
         export_pdf_btn.clicked.connect(self._export_pdf)
         lay.addWidget(export_pdf_btn)
 
-        self.results_table = QTableWidget()
-        self.results_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
-        lay.addWidget(self.results_table)
+        draw_win_btn = QPushButton("Losovat startovku")
+        draw_win_btn.clicked.connect(self.sldw.show)
+        lay.addWidget(draw_win_btn)
+
+        self.startlist_table = QTableWidget()
+        self.startlist_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        lay.addWidget(self.startlist_table)
 
     def _export_pdf(self):
-        res_pdf.export(
+        stl_pdf.export(
             QFileDialog.getSaveFileName(
-                self, "Export výsledků do PDF", selectedFilter=("PDF (*.pdf)")
+                self, "Export startovky do PDF", filter="PDF (*.pdf)"
             )[0],
             self.mw.db,
         )
 
-    def _update_results(self):
+    def _update_startlist(self):
         sess = Session(self.mw.db)
         categories = sess.scalars(Select(Category).order_by(Category.name.asc())).all()
 
-        self.results_table.clear()
-        self.results_table.setColumnCount(5)
-        self.results_table.setRowCount(1000)
+        self.startlist_table.horizontalHeader().setSectionResizeMode(
+            QHeaderView.ResizeMode.ResizeToContents
+        )
+        self.startlist_table.clear()
+        self.startlist_table.setColumnCount(3)
+        self.startlist_table.setRowCount(1000)
 
         row = 0
 
@@ -58,45 +65,35 @@ class StartlistWindow(QWidget):
             f.setPointSize(15)
             cat_name.setFont(f)
 
-            self.results_table.setItem(row, 0, cat_name)
-            self.results_table.setSpan(row, 1, 1, 4)
+            self.startlist_table.setItem(row, 0, cat_name)
+            self.startlist_table.setSpan(row, 1, 1, 2)
 
             controls = map(lambda x: x.name, category.controls)
-            self.results_table.setItem(row, 1, QTableWidgetItem(", ".join(controls)))
+            self.startlist_table.setItem(row, 1, QTableWidgetItem(", ".join(controls)))
 
             row += 1
 
-            results_cat = results.calculate_category(self.mw.db, category.name)
-
-            for person in results_cat:
-                if person.place == 0:
-                    place = person.status
+            for person in sess.scalars(
+                Select(Runner)
+                .where(Runner.category == category)
+                .order_by(Runner.startlist_time.asc())
+            ).all():
+                starttime = person.startlist_time
+                if starttime is None:
+                    starttime = "-"
                 else:
-                    place = f"{person.place}."
-
-                self.results_table.setItem(row, 0, QTableWidgetItem(place))
-                self.results_table.setItem(row, 1, QTableWidgetItem(person.name))
-                self.results_table.setItem(row, 2, QTableWidgetItem(f"{person.tx} TX"))
-                self.results_table.setItem(
-                    row, 3, QTableWidgetItem(" - ".join(person.order))
-                )
-                self.results_table.setItem(
-                    row,
-                    4,
-                    QTableWidgetItem(
-                        results.format_delta(timedelta(seconds=person.time))
-                    ),
-                )
+                    starttime = starttime.strftime("%H:%M:%S")
+                self.startlist_table.setItem(row, 0, QTableWidgetItem(person.name))
+                self.startlist_table.setItem(row, 1, QTableWidgetItem(person.reg))
+                self.startlist_table.setItem(row, 2, QTableWidgetItem(starttime))
 
                 row += 1
             row += 1
 
         sess.close()
 
-    def show(self):
-        self._update_results()
+    def _show(self):
+        self._update_startlist()
 
-        super().show()
-
-        self.results_table.horizontalHeader().hide()
-        self.results_table.verticalHeader().hide()
+        self.startlist_table.horizontalHeader().hide()
+        self.startlist_table.verticalHeader().hide()
