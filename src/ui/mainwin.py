@@ -25,8 +25,8 @@ from ui import (
     importwin,
     readoutwin,
     resultswin,
+    robiswin,
     runnerwin,
-    startlistdrawwin,
     startlistwin,
 )
 
@@ -69,6 +69,7 @@ class MainWindow(QMainWindow):
         self.readout_win = readoutwin.ReadoutWindow(self)
         self.results_win = resultswin.ResultsWindow(self)
         self.startlist_win = startlistwin.StartlistWindow(self)
+        self.robis_win = robiswin.ROBisWindow(self)
 
         self.windows = [
             self.basicinfo_win,
@@ -79,6 +80,7 @@ class MainWindow(QMainWindow):
             self.readout_win,
             self.results_win,
             self.startlist_win,
+            self.robis_win,
         ]
 
         self.mainwid = QTabWidget()
@@ -108,6 +110,8 @@ class MainWindow(QMainWindow):
 
         self.mainwid.addTab(self.results_win, "Výsledky")
         self.mainwid.setTabIcon(7, QIcon(":/icons/results.png"))
+
+        self.mainwid.addTab(self.robis_win, "ROBis")
 
         self.mainwid.setTabPosition(QTabWidget.TabPosition.North)
 

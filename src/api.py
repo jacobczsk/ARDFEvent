@@ -13,6 +13,8 @@ BI_TEMPLATE = {
     "limit": "LIMIT",
     "band": "BAND",
     "robis_api": "ROBIS_API",
+    "robis_id": "ROBIS_ID",
+    "robis_etap": "ROBIS_ETAP",
 }
 
 BANDS = ["2m", "80m", "kombinované"]

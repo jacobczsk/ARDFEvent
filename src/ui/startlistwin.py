@@ -53,7 +53,7 @@ class StartlistWindow(QWidget):
             QHeaderView.ResizeMode.ResizeToContents
         )
         self.startlist_table.clear()
-        self.startlist_table.setColumnCount(3)
+        self.startlist_table.setColumnCount(4)
         self.startlist_table.setRowCount(1000)
 
         row = 0
@@ -66,7 +66,7 @@ class StartlistWindow(QWidget):
             cat_name.setFont(f)
 
             self.startlist_table.setItem(row, 0, cat_name)
-            self.startlist_table.setSpan(row, 1, 1, 2)
+            self.startlist_table.setSpan(row, 1, 1, 3)
 
             controls = map(lambda x: x.name, category.controls)
             self.startlist_table.setItem(row, 1, QTableWidgetItem(", ".join(controls)))
@@ -85,7 +85,8 @@ class StartlistWindow(QWidget):
                     starttime = starttime.strftime("%H:%M:%S")
                 self.startlist_table.setItem(row, 0, QTableWidgetItem(person.name))
                 self.startlist_table.setItem(row, 1, QTableWidgetItem(person.reg))
-                self.startlist_table.setItem(row, 2, QTableWidgetItem(starttime))
+                self.startlist_table.setItem(row, 2, QTableWidgetItem(str(person.si)))
+                self.startlist_table.setItem(row, 3, QTableWidgetItem(starttime))
 
                 row += 1
             row += 1

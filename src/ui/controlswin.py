@@ -1,6 +1,7 @@
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QHBoxLayout,
+    QLabel,
     QPushButton,
     QTableWidget,
     QTableWidgetItem,
@@ -22,6 +23,8 @@ class ControlsWindow(QWidget):
 
         mainlay = QVBoxLayout()
         self.setLayout(mainlay)
+
+        mainlay.addWidget(QLabel("Přednastavené kontroly:"))
 
         presetslay = QHBoxLayout()
         mainlay.addLayout(presetslay)

@@ -36,6 +36,7 @@ def export(filename, db):
                     "RUNNER",
                     person.name,
                     person.reg,
+                    str(person.si),
                     starttime,
                 ]
             )

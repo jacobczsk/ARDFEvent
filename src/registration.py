@@ -6,7 +6,7 @@ import requests
 
 def map_runner(orig: dict):
     return {
-        "name": f"{orig["last_name"]} {orig["first_name"]}",
+        "name": f"{orig["last_name"]}, {orig["first_name"]}",
         "reg": orig["index"],
         "si": 0,
         "byear": orig["birth_year"],

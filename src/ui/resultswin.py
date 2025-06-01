@@ -33,25 +33,9 @@ class ResultsWindow(QWidget):
         export_pdf_btn.clicked.connect(self._export_pdf)
         lay.addWidget(export_pdf_btn)
 
-        robis_btn = QPushButton("Nahrát na ROBis")
-        robis_btn.clicked.connect(self._upload_robis)
-        lay.addWidget(robis_btn)
-
         self.results_table = QTableWidget()
         self.results_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         lay.addWidget(self.results_table)
-
-    def _upload_robis(self):
-        response = requests.post(
-            "https://rob-is.cz/api/results/?valid=True",
-            res_json.export(self.mw.db),
-            headers={
-                "Race-Api-Key": api.get_basic_info(self.mw.db)["robis_api"],
-                "Content-Type": "application/json",
-            },
-        )
-
-        print(response.status_code, response.text)
 
     def _export_pdf(self):
         res_pdf.export(
