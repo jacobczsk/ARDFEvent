@@ -1,13 +1,11 @@
-import csv
-import io
 import time
 from datetime import datetime, timedelta
 
-import requests
 from escpos.printer import Serial
 from PySide6.QtCore import QThread, Signal
 from PySide6.QtGui import QCloseEvent
 from PySide6.QtWidgets import (
+    QCheckBox,
     QComboBox,
     QCompleter,
     QDialog,
@@ -91,6 +89,9 @@ class ReadoutWindow(QWidget):
         self.printer_edit = QComboBox()
         portslay.addRow("Port tiskárny", self.printer_edit)
 
+        self.double_print_chk = QCheckBox()
+        portslay.addRow("Dvojtisk", self.double_print_chk)
+
         self.log = QTextBrowser()
         lay.addWidget(self.log)
 
@@ -112,7 +113,7 @@ class ReadoutWindow(QWidget):
             self.proc.finished.connect(self._proc_stopped)
             self.proc.start()
 
-            self.port = self.printer_edit.currentText()
+            self.printer = Serial(self.printer_edit.currentText())
 
     def _proc_running(self):
         self.state_label.setText("Stav: Aktivní")
@@ -201,10 +202,22 @@ class ReadoutWindow(QWidget):
         sess.close()
 
         self.mw.results_win._update_results()
-        send_online_readout(self.mw.db, si_no)
+        self.mw.robis_win._send_online_readout(self.mw.db, si_no)
 
-        if self.port != "Netisknout":
-            print_readout(self.mw.db, si_no, self.port)
+        if self.printer != "Netisknout":
+            print_readout(self.mw.db, si_no, self.printer)
+            if (
+                self.double_print_chk.isChecked()
+                and QMessageBox.warning(
+                    self,
+                    "Dvojtisk",
+                    "Tisknout podruhé?",
+                    QMessageBox.StandardButton.Ok,
+                    QMessageBox.StandardButton.Abort,
+                )
+                == QMessageBox.StandardButton.Ok
+            ):
+                print_readout(self.mw.db, si_no, self.printer, True)
 
     def _update_ports(self):
         oldportsi = self.siport_edit.currentText()
@@ -240,49 +253,7 @@ class ReadoutWindow(QWidget):
         super().closeEvent(event)
 
 
-def send_online_readout(db, si: int):
-    sess = Session(db)
-    runner = sess.scalars(Select(Runner).where(Runner.si == si)).one()
-
-    results_cat = results.calculate_category(db, runner.category.name)
-
-    sio = io.StringIO()
-    writer = csv.writer(sio, delimiter=";", quoting=csv.QUOTE_MINIMAL)
-
-    for result in results_cat:
-        order = ""
-        last = result.start
-        for punch in result.order:
-            order += f"{punch[0]},CONTROL,OK,{results.format_delta(punch[1] - last)}#"
-            last = punch[1]
-        if result.finish:
-            order += f"F,FINISH,OK,{results.format_delta(result.finish - last)}"
-        writer.writerow(
-            [
-                result.reg,
-                result.si,
-                result.name.split(" ")[0],
-                " ".join(result.name.split(" ")[1:]),
-                results.format_delta(timedelta(seconds=result.time)),
-                result.place,
-                result.tx,
-                result.status,
-                order,
-            ]
-        )
-
-    sess.close()
-
-    requests.put(
-        "https://rob-is.cz/api/results/?name=csv",
-        data=sio.getvalue().encode("utf-8"),
-        headers={"Race-Api-Key": api.get_basic_info(db)["robis_api"]},
-    )
-
-
-def print_readout(db, si: int, port: str, snura=False):
-    printer = Serial(port)
-
+def print_readout(db, si: int, printer: Serial, snura=False):
     def text(string: str = ""):
         printer._raw(string.encode("cp852"))
 
@@ -291,12 +262,15 @@ def print_readout(db, si: int, port: str, snura=False):
 
     basic_info = api.get_basic_info(db)
 
-    printer.set(align="center", double_height=True)
-    line(basic_info["name"])
-    printer.set(align="center", double_height=False)
-    line(datetime.fromisoformat(basic_info["date_tzero"]).strftime("%d. %m. %Y"))
-    printer.set(align="left")
-    line()
+    if not snura:
+        printer.set(align="center", double_height=True)
+        line(basic_info["name"])
+        printer.set(align="center", double_height=False)
+        line(datetime.fromisoformat(basic_info["date_tzero"]).strftime("%d. %m. %Y"))
+        printer.set(align="left")
+        line()
+    else:
+        text("\n\n\n\n\n\n")
 
     sess = Session(db)
 
@@ -308,13 +282,19 @@ def print_readout(db, si: int, port: str, snura=False):
         Select(Punch).where(Punch.si == si).where(Punch.code == 1000)
     ).one_or_none()
 
-    printer.set(bold=True)
-    text(runner.name)
-    printer.set(bold=False)
-    line(f" ({runner.reg})")
-    line(f"Kat.:  {runner.category.name}")
-    line(f"Klub:  {runner.club}")
-    line(f"SI:    {runner.si}")
+    if not snura:
+        printer.set(bold=True)
+        text(runner.name)
+        printer.set(bold=False)
+        line(f" ({runner.reg})")
+        line(f"Kat.:  {runner.category.name}")
+        line(f"Klub:  {runner.club}")
+        line(f"SI:    {runner.si}")
+    else:
+        printer.set(align="center", double_height=True)
+        line(runner.name)
+        printer.set(align="left", double_height=False)
+        line(f"{runner.reg}, {runner.category.name}")
 
     startovka = None
 
@@ -329,7 +309,7 @@ def print_readout(db, si: int, port: str, snura=False):
     elif startovka:
         stime: datetime = startovka
     else:
-        stime: datetime = None
+        stime: datetime = datetime.fromisoformat(api.get_basic_info(db)["date_tzero"])
 
     lasttime = stime
 
@@ -371,28 +351,32 @@ def print_readout(db, si: int, port: str, snura=False):
     line(
         f"{format_delta(timedelta(seconds=result.time))}, {result.tx} TX, {result.status}\n"
     )
-    line("Výsledky:")
     printer.set(bold=False)
-
-    for result_lp in results_cat[:3]:
-        place = f"{result_lp.place}." if result_lp.status == "OK" else "-"
-        printer.set(align="left")
-        line(f"{place} {result_lp.name}")
-        printer.set(align="right")
-        line(f"{format_delta(timedelta(seconds=result_lp.time))}, {result_lp.tx} TX")
-
-    if result.place > 3:
+    if not snura:
         printer.set(bold=True)
-        place = f"{result.place}." if result.status == "OK" else "-"
-        printer.set(align="left")
-        line(f"{place} {result.name}")
-        printer.set(align="right")
-        line(f"{format_delta(timedelta(seconds=result.time))}, {result.tx} TX")
+        line("Výsledky:")
         printer.set(bold=False)
+
+        for result_lp in results_cat[:3]:
+            place = f"{result_lp.place}." if result_lp.status == "OK" else "-"
+            printer.set(align="left")
+            line(f"{place} {result_lp.name}")
+            printer.set(align="right")
+            line(
+                f"{format_delta(timedelta(seconds=result_lp.time))}, {result_lp.tx} TX"
+            )
+
+        if result.place > 3:
+            printer.set(bold=True)
+            place = f"{result.place}." if result.status == "OK" else "-"
+            printer.set(align="left")
+            line(f"{place} {result.name}")
+            printer.set(align="right")
+            line(f"{format_delta(timedelta(seconds=result.time))}, {result.tx} TX")
+            printer.set(bold=False)
 
     printer.set(align="center")
     line("ARDFEvent, (C) Jakub Jiroutek")
 
     printer.print_and_feed(4)
-    printer.close()
     sess.close()

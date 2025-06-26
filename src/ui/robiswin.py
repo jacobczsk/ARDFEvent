@@ -1,4 +1,6 @@
-from datetime import datetime
+import io
+import json
+from datetime import datetime, timedelta
 
 import requests
 from dateutil.parser import parser
@@ -17,6 +19,7 @@ from sqlalchemy import Delete, Select
 from sqlalchemy.orm import Session
 
 import api
+import results
 from exports import json_results as res_json
 from models import Category, Runner
 
@@ -53,6 +56,12 @@ class ROBisWindow(QWidget):
         self.download_btn.clicked.connect(self._download)
         lay.addRow(self.download_btn)
 
+        self.update_btn = QPushButton("Aktualizovat všechny online výsledky")
+        self.update_btn.clicked.connect(
+            lambda: self._send_online_readout(self.mw.db, 0, True)
+        )
+        lay.addRow(self.update_btn)
+
         self.upload_btn = QPushButton("Nahrát výsledky")
         self.upload_btn.clicked.connect(self._upload)
         lay.addRow(self.upload_btn)
@@ -88,8 +97,8 @@ class ROBisWindow(QWidget):
             },
         )
 
-        QMessageBox.information(
-            self, "Stav nahrání", f"{response.status_code} {response.text}"
+        self.log.append(
+            f"{datetime.now().strftime("%H:%M:%S")} - Finální výsledky: {response.status_code} {response.text}"
         )
 
     def _download(self):
@@ -159,4 +168,79 @@ class ROBisWindow(QWidget):
         sess.commit()
         sess.close()
 
-        QMessageBox.information(self, "Stav stažení", "Stažení proběhlo úspěšně.")
+        self.log.append(f"{datetime.now().strftime("%H:%M:%S")} - Import OK")
+
+    def _send_online_readout(self, db, si: int, all: bool = False):
+        sess = Session(db)
+
+        if not api.get_basic_info(db)["robis_api"]:
+            return
+
+        categories = []
+        if not all:
+            runner = sess.scalars(Select(Runner).where(Runner.si == si)).one()
+            categories = [runner.category]
+        else:
+            runner = None
+            categories = sess.scalars(Select(Category)).all()
+
+        data = []
+
+        for category in categories:
+            results_cat = results.calculate_category(db, category.name)
+
+            for result in results_cat:
+                order = []
+                last = result.start
+                for punch in result.order:
+                    order.append(
+                        {
+                            "code": punch[0],
+                            "control_type": "CONTROL" if punch[0] != "M" else "BEACON",
+                            "punch_status": "OK",
+                            "split_time": results.format_delta(punch[1] - last),
+                        }
+                    )
+                    last = punch[1]
+                if result.finish:
+                    order.append(
+                        {
+                            "code": "F",
+                            "control_type": "FINISH",
+                            "punch_status": "OK",
+                            "split_time": results.format_delta(result.finish - last),
+                        }
+                    )
+
+                data.append(
+                    {
+                        "competitor_index": result.reg,
+                        "si_number": result.si,
+                        "last_name": result.name.split(", ")[0],
+                        "first_name": result.name.split(", ")[1],
+                        "result": {
+                            "run_time": results.format_delta(
+                                timedelta(seconds=result.time)
+                            ),
+                            "place": result.place,
+                            "controls_num": result.tx,
+                            "result_status": result.status,
+                            "punches": order,
+                        },
+                    }
+                )
+
+            sess.close()
+
+        response = requests.put(
+            "https://rob-is.cz/api/results/?name=json",
+            data=json.dumps(data).encode("utf-8"),
+            headers={
+                "Race-Api-Key": api.get_basic_info(db)["robis_api"],
+                "Content-Type": "application/json",
+            },
+        )
+
+        self.log.append(
+            f"{datetime.now().strftime("%H:%M:%S")} - Online výsledky: {response.status_code} {response.text}"
+        )

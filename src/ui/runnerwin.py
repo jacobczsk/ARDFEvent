@@ -4,6 +4,7 @@ from datetime import timedelta
 from escpos.printer import Serial
 from PySide6.QtCore import QStringListModel, Qt
 from PySide6.QtWidgets import (
+    QCheckBox,
     QComboBox,
     QCompleter,
     QFormLayout,
@@ -89,6 +90,16 @@ class RunnerWindow(QWidget):
         self.starttime_edit.setDisplayFormat("HH:mm:ss")
         details_lay.addRow("Start dle startovky", self.starttime_edit)
 
+        self.dns_edit = QCheckBox()
+        details_lay.addRow("DNS", self.dns_edit)
+
+        self.dsq_edit = QCheckBox()
+        details_lay.addRow("DSQ", self.dsq_edit)
+
+        save_btn = QPushButton("Uložit")
+        save_btn.clicked.connect(self._save_runner)
+        details_lay.addWidget(save_btn)
+
         print_btn = QPushButton("Vytisknout výčet")
         print_btn.clicked.connect(self._print_readout)
         details_lay.addWidget(print_btn)
@@ -118,6 +129,9 @@ class RunnerWindow(QWidget):
             Select(Runner).where(Runner.id == self.selected)
         ).one_or_none()
 
+    def _save_btn(self):
+        self._select_by_user(QListWidgetItem(self.name_edit.text()))
+
     def _save_runner(self):
         sess = Session(self.mw.db)
         runner = self._get_runner(sess)
@@ -131,15 +145,14 @@ class RunnerWindow(QWidget):
                 runner.startlist_time = (
                     self.starttime_edit.dateTime().toPython().astimezone()
                 )
-
-            category = sess.scalars(
+            runner.category = sess.scalars(
                 Select(Category).where(
                     Category.name == self.category_edit.currentText()
                 )
-            ).one_or_none()
-            if category:
-                runner = self._get_runner(sess)
-                runner.category = category
+            ).one()
+            runner.manual_dns = self.dns_edit.isChecked()
+            runner.manual_disk = self.dsq_edit.isChecked()
+
         sess.commit()
         sess.close()
 
@@ -175,6 +188,9 @@ class RunnerWindow(QWidget):
                 self.category_indexes[runner.category.name]
             )
 
+            self.dns_edit.setChecked(runner.manual_dns)
+            self.dsq_edit.setChecked(runner.manual_disk)
+
             self.selected = runner.id
         else:
             raise ValueError("Runner not found")
@@ -182,6 +198,8 @@ class RunnerWindow(QWidget):
 
     def _update_runners_cats(self):
         self.runners_list.clear()
+
+        cat_index = self.category_edit.currentIndex()
         self.category_edit.clear()
 
         sess = Session(self.mw.db)
@@ -202,6 +220,8 @@ class RunnerWindow(QWidget):
             self.category_indexes[category.name] = i
             i += 1
 
+        self.category_edit.setCurrentIndex(cat_index)
+
         runners = sess.scalars(Select(Runner)).all()
 
         registered = api.get_registered_names()
@@ -211,7 +231,6 @@ class RunnerWindow(QWidget):
 
         self.name_completer.setModel(QStringListModel(registered))
 
-        sess.commit()
         sess.close()
 
     def _new_runner(self):
@@ -263,7 +282,9 @@ class RunnerWindow(QWidget):
             inpd.setLabelText("Vyberte port tiskárny")
             inpd.setWindowTitle("Tisk")
             if inpd.exec() == QInputDialog.DialogCode.Accepted:
-                print_readout(self.mw.db, runner.si, inpd.textValue())
+                printer = Serial(inpd.textValue())
+                print_readout(self.mw.db, runner.si, printer)
+                printer.close()
 
         sess.close()
 

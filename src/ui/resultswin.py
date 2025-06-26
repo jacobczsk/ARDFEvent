@@ -1,9 +1,11 @@
 from datetime import timedelta
 
-import requests
 from PySide6.QtWidgets import (
     QFileDialog,
+    QHBoxLayout,
     QHeaderView,
+    QInputDialog,
+    QMenu,
     QPushButton,
     QTableWidget,
     QTableWidgetItem,
@@ -13,9 +15,9 @@ from PySide6.QtWidgets import (
 from sqlalchemy import Select
 from sqlalchemy.orm import Session
 
-import api
+import exports.html_results as res_html
 import exports.json_results as res_json
-import exports.pdf_results as res_pdf
+import exports.xml_results as res_xml
 import results
 from models import Category
 
@@ -29,27 +31,75 @@ class ResultsWindow(QWidget):
         lay = QVBoxLayout()
         self.setLayout(lay)
 
-        export_pdf_btn = QPushButton("Exportovat do PDF")
-        export_pdf_btn.clicked.connect(self._export_pdf)
-        lay.addWidget(export_pdf_btn)
+        btn_lay = QHBoxLayout()
+        lay.addLayout(btn_lay)
+
+        export_menu = QMenu(self)
+        export_menu.addAction("HTML", self._export_html)
+        export_menu.addAction("HTML s mezičasy", self._export_html_splits)
+        export_menu.addAction("IOF XML 3.0", self._export_iof_xml)
+        export_menu.addAction("ARDF JSON", self._export_json)
+
+        export_btn = QPushButton("Exportovat")
+        export_btn.setMenu(export_menu)
+        btn_lay.addWidget(export_btn)
+
+        btn_lay.addStretch()
 
         self.results_table = QTableWidget()
         self.results_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         lay.addWidget(self.results_table)
 
-    def _export_pdf(self):
-        res_pdf.export(
-            QFileDialog.getSaveFileName(
-                self, "Export výsledků do PDF", selectedFilter=("PDF (*.pdf)")
-            )[0],
-            self.mw.db,
-        )
+    def _export_html_splits(self):
+
+        fn = QFileDialog.getSaveFileName(
+            self, "Export mezičasů do HTML", filter=("HTML (*.html)")
+        )[0]
+
+        if fn:
+            res_html.export(fn, self.mw.db, True)
+
+    def _export_html(self):
+        fn = QFileDialog.getSaveFileName(
+            self, "Export výsledků do HTML", filter=("HTML (*.html)")
+        )[0]
+
+        if fn:
+            res_html.export(fn, self.mw.db)
+
+    def _export_iof_xml(self):
+        fn = QFileDialog.getSaveFileName(
+            self,
+            "Export výsledků do IOF XML 3.0",
+            filter=("IOF XML 3.0 (*.xml)"),
+        )[0]
+
+        if fn:
+            res_xml.export(
+                fn,
+                self.mw.db,
+            )
+
+    def _export_json(self):
+        fn = QFileDialog.getSaveFileName(
+            self,
+            "Export výsledků do ARDF JSON",
+            filter=("ARDF JSON (*.json)"),
+        )[0]
+
+        if fn:
+            data = res_json.export(self.mw.db)
+            if not fn.endswith(".json"):
+                fn += ".json"
+            with open(fn, "w") as f:
+                f.write(data)
 
     def _update_results(self):
         sess = Session(self.mw.db)
         categories = sess.scalars(Select(Category).order_by(Category.name.asc())).all()
 
         self.results_table.clear()
+        self.results_table.setRowCount(0)
         self.results_table.horizontalHeader().setSectionResizeMode(
             QHeaderView.ResizeMode.ResizeToContents
         )
@@ -73,7 +123,7 @@ class ResultsWindow(QWidget):
 
             row += 1
 
-            results_cat = results.calculate_category(self.mw.db, category.name)
+            results_cat = results.calculate_category(self.mw.db, category.name, True)
 
             for person in results_cat:
                 if person.place == 0:
@@ -83,19 +133,22 @@ class ResultsWindow(QWidget):
 
                 self.results_table.setItem(row, 0, QTableWidgetItem(place))
                 self.results_table.setItem(row, 1, QTableWidgetItem(person.name))
-                self.results_table.setItem(row, 2, QTableWidgetItem(f"{person.tx} TX"))
-                self.results_table.setItem(
-                    row,
-                    3,
-                    QTableWidgetItem(" - ".join(map(lambda x: x[0], person.order))),
-                )
-                self.results_table.setItem(
-                    row,
-                    4,
-                    QTableWidgetItem(
-                        results.format_delta(timedelta(seconds=person.time))
-                    ),
-                )
+                if person.status == "OK":
+                    self.results_table.setItem(
+                        row, 2, QTableWidgetItem(f"{person.tx} TX")
+                    )
+                    self.results_table.setItem(
+                        row,
+                        3,
+                        QTableWidgetItem(" - ".join(map(lambda x: x[0], person.order))),
+                    )
+                    self.results_table.setItem(
+                        row,
+                        4,
+                        QTableWidgetItem(
+                            results.format_delta(timedelta(seconds=person.time))
+                        ),
+                    )
 
                 row += 1
             row += 1

@@ -22,6 +22,7 @@ class StartlistDrawWindow(QWidget):
         self.setWindowTitle("Startovní listina")
 
         self.base_interval_edit = QSpinBox()
+        self.base_interval_edit.setSingleStep(0.5)
         self.mainlay.addRow("Startovní interval", self.base_interval_edit)
 
         self.draw_btn = QPushButton("Losovat!")

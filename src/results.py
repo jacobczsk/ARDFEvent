@@ -17,6 +17,7 @@ class Result:
         time: int,
         status: str,
         order: list,
+        club: str,
         start: datetime | None = None,
         finish: datetime | None = None,
     ):
@@ -28,11 +29,12 @@ class Result:
         self.status = status
         self.order = order
         self.place = 0
+        self.club = club
         self.start = start
         self.finish = finish
 
 
-def calculate_category(db: Engine, name: str):
+def calculate_category(db: Engine, name: str, include_unknown: bool = False):
     limit = int(api.get_basic_info(db)["limit"])
 
     sess = Session(db)
@@ -46,6 +48,37 @@ def calculate_category(db: Engine, name: str):
     cat_codes = list(map(lambda c: c.code, controls))
 
     for runner in runners:
+        if runner.manual_dns:
+            results.append(
+                Result(
+                    runner.name,
+                    runner.reg,
+                    runner.si,
+                    0,
+                    0,
+                    "DNS",
+                    [],
+                    runner.club,
+                    start,
+                )
+            )
+            continue
+        elif runner.manual_disk:
+            results.append(
+                Result(
+                    runner.name,
+                    runner.reg,
+                    runner.si,
+                    0,
+                    0,
+                    "DSQ",
+                    [],
+                    runner.club,
+                    start,
+                )
+            )
+            continue
+
         loc_controls = cat_codes.copy()
         loc_mandatory = mandatory.copy()
 
@@ -58,9 +91,20 @@ def calculate_category(db: Engine, name: str):
         order = []
 
         if len(punches) == 0:
-            results.append(
-                Result(runner.name, runner.reg, runner.si, 0, 0, "DNS", order)
-            )
+            if include_unknown:
+                results.append(
+                    Result(
+                        runner.name,
+                        runner.reg,
+                        runner.si,
+                        0,
+                        0,
+                        "?",
+                        [],
+                        runner.club,
+                        start,
+                    )
+                )
             continue
 
         for punch in punches:
@@ -90,7 +134,7 @@ def calculate_category(db: Engine, name: str):
         status = "OK"
 
         if not start:
-            status = "DNS"
+            start = api.get_basic_info(db)["date_tzero"]
         elif not finish:
             status = "DNF"
         else:
@@ -110,6 +154,7 @@ def calculate_category(db: Engine, name: str):
                 time,
                 status,
                 order,
+                runner.club,
                 start,
                 finish,
             )

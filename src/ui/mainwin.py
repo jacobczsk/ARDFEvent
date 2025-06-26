@@ -1,33 +1,24 @@
-import asyncio
-import sys
-from pathlib import Path
-
-import requests
 import sqlalchemy
 from PySide6.QtGui import QIcon
-from PySide6.QtWidgets import (
-    QGridLayout,
-    QInputDialog,
-    QLineEdit,
-    QMainWindow,
-    QMessageBox,
-    QPushButton,
-    QTabWidget,
-    QWidget,
-)
+from PySide6.QtWidgets import QMainWindow, QTabWidget
 
+import api
 import models
-import ui.resources
+import ui.resources as resources
 from ui import (
     basicinfowin,
     categorieswin,
     controlswin,
     importwin,
+    ochecklistwin,
     readoutwin,
     resultswin,
     robiswin,
+    runnersinforestwin,
     runnerwin,
+    startlistdrawwin,
     startlistwin,
+    welcomewin,
 )
 
 
@@ -35,31 +26,20 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        name, ok_name = QInputDialog.getText(
-            self, "ARDFEvent", "Zadej název závodu", QLineEdit.Normal, ""
-        )
-        self.fn = Path.home() / f".ardf/{name}.sqlite"
+        self.welcomewin = welcomewin.WelcomeWindow(self)
+        self.welcomewin.show()
 
-        self.controls_win = controlswin.ControlsWindow(self)
-        if not (ok_name and self.fn):
-            QMessageBox.critical(self, "ARDFEvent", "Zadejte cestu")
-            sys.exit(255)
+    def show(self, fn):
+        super().show()
 
-        if not self.fn.exists():
-            if (
-                QMessageBox.information(
-                    self, "ARDFEvent", "Cesta neexistuje, vytváří se nový"
-                )
-                == QMessageBox.StandardButton.Ok
-            ):
-                open(self.fn, "w+").close()
+        self.fn = fn
 
         self.db = sqlalchemy.create_engine(
             f"sqlite:////{self.fn.absolute()}/", max_overflow=-1
         )
         models.Base.metadata.create_all(self.db)
 
-        self.setWindowTitle(f"ARDFEvent - {name}")
+        self.setWindowTitle(f"ARDFEvent - {api.get_basic_info(self.db)["name"]}")
 
         self.basicinfo_win = basicinfowin.BasicInfoWindow(self)
         self.controls_win = controlswin.ControlsWindow(self)
@@ -68,7 +48,10 @@ class MainWindow(QMainWindow):
         self.runners_win = runnerwin.RunnerWindow(self)
         self.readout_win = readoutwin.ReadoutWindow(self)
         self.results_win = resultswin.ResultsWindow(self)
+        self.startlistdraw_win = startlistdrawwin.StartlistDrawWindow(self)
         self.startlist_win = startlistwin.StartlistWindow(self)
+        self.ochecklist_win = ochecklistwin.OCheckListWindow(self)
+        self.inforest_win = runnersinforestwin.RunnersInForestWindow(self)
         self.robis_win = robiswin.ROBisWindow(self)
 
         self.windows = [
@@ -80,6 +63,9 @@ class MainWindow(QMainWindow):
             self.readout_win,
             self.results_win,
             self.startlist_win,
+            self.startlistdraw_win,
+            self.ochecklist_win,
+            self.inforest_win,
             self.robis_win,
         ]
 
@@ -106,12 +92,16 @@ class MainWindow(QMainWindow):
         self.mainwid.setTabIcon(5, QIcon(":/icons/readout.png"))
 
         self.mainwid.addTab(self.startlist_win, "Startovka")
-        # results_btn.setIcon(QIcon(":/icons/startlist.png"))
+        self.mainwid.setTabIcon(6, QIcon(":/icons/startlist.png"))
 
         self.mainwid.addTab(self.results_win, "Výsledky")
         self.mainwid.setTabIcon(7, QIcon(":/icons/results.png"))
 
+        self.mainwid.addTab(self.inforest_win, "Závodníci v lese")
+        self.mainwid.setTabIcon(8, QIcon(":/icons/inforest.png"))
+
         self.mainwid.addTab(self.robis_win, "ROBis")
+        self.mainwid.setTabIcon(9, QIcon(":/icons/robis.png"))
 
         self.mainwid.setTabPosition(QTabWidget.TabPosition.North)
 

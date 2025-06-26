@@ -1,6 +1,8 @@
 from PySide6.QtWidgets import (
     QFileDialog,
+    QHBoxLayout,
     QHeaderView,
+    QMenu,
     QPushButton,
     QTableWidget,
     QTableWidgetItem,
@@ -10,7 +12,9 @@ from PySide6.QtWidgets import (
 from sqlalchemy import Select
 from sqlalchemy.orm import Session
 
-import exports.pdf_startlist as stl_pdf
+import exports.html_startlist as stl_html
+import exports.robis_csv_startlist as stl_robis_csv
+import exports.xml_startlist as stl_xml
 from models import Category, Runner
 from ui import startlistdrawwin
 
@@ -20,30 +24,68 @@ class StartlistWindow(QWidget):
         super().__init__()
 
         self.mw = mw
-        self.sldw = startlistdrawwin.StartlistDrawWindow(self.mw)
 
         lay = QVBoxLayout()
         self.setLayout(lay)
 
-        export_pdf_btn = QPushButton("Exportovat do PDF")
-        export_pdf_btn.clicked.connect(self._export_pdf)
-        lay.addWidget(export_pdf_btn)
+        btn_lay = QHBoxLayout()
+        lay.addLayout(btn_lay)
+
+        export_menu = QMenu(self)
+        export_menu.addAction("HTML", self._export_html)
+        export_menu.addAction("CSV pro ROBis", self._export_robis_csv)
+        export_menu.addAction("IOF XML 3.0", self._export_iof_xml)
+
+        export_btn = QPushButton("Exportovat")
+        export_btn.setMenu(export_menu)
+        btn_lay.addWidget(export_btn)
 
         draw_win_btn = QPushButton("Losovat startovku")
-        draw_win_btn.clicked.connect(self.sldw.show)
-        lay.addWidget(draw_win_btn)
+        draw_win_btn.clicked.connect(self.mw.startlistdraw_win.show)
+        btn_lay.addWidget(draw_win_btn)
+
+        btn_lay.addStretch()
 
         self.startlist_table = QTableWidget()
         self.startlist_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         lay.addWidget(self.startlist_table)
 
-    def _export_pdf(self):
-        stl_pdf.export(
-            QFileDialog.getSaveFileName(
-                self, "Export startovky do PDF", filter="PDF (*.pdf)"
-            )[0],
-            self.mw.db,
-        )
+    def _export_html(self):
+        fn = QFileDialog.getSaveFileName(
+            self, "Export startovky do HTML", filter=("HTML (*.html)")
+        )[0]
+
+        if fn:
+            stl_html.export(
+                fn,
+                self.mw.db,
+            )
+
+    def _export_robis_csv(self):
+        fn = QFileDialog.getSaveFileName(
+            self,
+            "Export startovky do CSV pro ROBis",
+            filter=("ROBis CSV (*.csv)"),
+        )[0]
+
+        if fn:
+            stl_robis_csv.export(
+                fn,
+                self.mw.db,
+            )
+
+    def _export_iof_xml(self):
+        fn = QFileDialog.getSaveFileName(
+            self,
+            "Export startovky do IOF XML 3.0",
+            filter=("IOF XML 3.0 (*.xml)"),
+        )[0]
+
+        if fn:
+            stl_xml.export(
+                fn,
+                self.mw.db,
+            )
 
     def _update_startlist(self):
         sess = Session(self.mw.db)
@@ -68,8 +110,9 @@ class StartlistWindow(QWidget):
             self.startlist_table.setItem(row, 0, cat_name)
             self.startlist_table.setSpan(row, 1, 1, 3)
 
-            controls = map(lambda x: x.name, category.controls)
-            self.startlist_table.setItem(row, 1, QTableWidgetItem(", ".join(controls)))
+            self.startlist_table.setItem(
+                row, 1, QTableWidgetItem(category.display_controls)
+            )
 
             row += 1
 

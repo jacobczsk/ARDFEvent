@@ -30,6 +30,7 @@ class Category(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str]
+    display_controls: Mapped[str]
     runners: Mapped[List["Runner"]] = relationship(back_populates="category")
     controls: Mapped[List["Control"]] = relationship(
         secondary=control_associations, back_populates="categories"
@@ -61,12 +62,15 @@ class Runner(Base):
     startlist_time: Mapped[datetime | None]
     category_id: Mapped[int] = mapped_column(ForeignKey("categories.id"))
     category: Mapped["Category"] = relationship(back_populates="runners")
+    ocheck_processed: Mapped[bool] = mapped_column(default=False)
+    manual_dns: Mapped[bool] = mapped_column(default=False)
+    manual_disk: Mapped[bool] = mapped_column(default=False)
 
 
 class Punch(Base):
     __tablename__ = "punches"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    code: Mapped[int]  # 1000 = start, 1001 = finish
+    code: Mapped[int]  # 1000 = start, 1001 = finish, 1002 = OCheckList
     si: Mapped[int]
     time: Mapped[datetime]
