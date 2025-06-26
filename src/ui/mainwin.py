@@ -35,7 +35,7 @@ class MainWindow(QMainWindow):
         self.fn = fn
 
         self.db = sqlalchemy.create_engine(
-            f"sqlite:////{self.fn.absolute()}/", max_overflow=-1
+            f"sqlite:///{self.fn.absolute()}/", max_overflow=-1
         )
         models.Base.metadata.create_all(self.db)
 
