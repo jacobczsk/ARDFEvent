@@ -1,3 +1,3 @@
 # ARDFEvent
 
-Open-source and a simple ARDF event manager.
+Open-source and simple ARDF event manager.
