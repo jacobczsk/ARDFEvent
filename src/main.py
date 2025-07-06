@@ -1,14 +1,13 @@
-from pathlib import Path
 import threading
+from pathlib import Path
 
 from PySide6.QtWidgets import QApplication
 
 import registration
 import ui.mainwin as mainwin
 
-
 if __name__ == "__main__":
-    rootdir = Path.home() / ".ardf"
+    rootdir = Path.home() / ".ardfevent"
 
     if not rootdir.exists():
         rootdir.mkdir()
