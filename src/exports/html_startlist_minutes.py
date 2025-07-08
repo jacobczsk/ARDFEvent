@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 import api
 from exports import html_common
-from models import Category, Runner
+from models import Runner
 from results import format_delta
 
 
@@ -21,34 +21,32 @@ def export(filename, db):
 def generate(db):
     sess = Session(db)
     date_tzero = datetime.fromisoformat(api.get_basic_info(db)["date_tzero"])
-    categories = []
-    categories_db = sess.scalars(Select(Category).order_by(Category.name.asc())).all()
+    minutes = []
+    minutes_db = sess.scalars(
+        Select(Runner.startlist_time).distinct().order_by(Runner.startlist_time.asc())
+    ).all()
 
-    for category in categories_db:
+    for minute in minutes_db:
         runners = []
         for person in sess.scalars(
             Select(Runner)
-            .where(Runner.category == category)
-            .order_by(Runner.startlist_time.asc())
+            .where(Runner.startlist_time == minute)
+            .order_by(Runner.name.asc())
         ).all():
-            starttime = person.startlist_time
-            if starttime is None:
-                starttime_txt = "-"
-            else:
-                starttime_txt = starttime.strftime("%H:%M:%S")
             runners.append(
                 {
                     "name": person.name,
                     "reg": person.reg,
                     "si": person.si,
-                    "starttime_abs": starttime_txt,
-                    "starttime_rel": format_delta((starttime - date_tzero)),
+                    "category": person.category.name,
                 }
             )
-        categories.append(
+        minutes.append(
             {
-                "name": category.name,
-                "controls": category.display_controls,
+                "abs": minute.strftime("%H:%M:%S"),
+                "rel": format_delta(
+                    (minute.replace(tzinfo=None) - date_tzero.replace(tzinfo=None))
+                ),
                 "runners": runners,
             }
         )
@@ -56,6 +54,6 @@ def generate(db):
     sess.close()
 
     env = Environment(loader=PackageLoader("exports"), autoescape=select_autoescape())
-    return env.get_template("startlist.html").render(
-        event=html_common.get_event(db), categories=categories
+    return env.get_template("startlist_minutes.html").render(
+        event=html_common.get_event(db), minutes=minutes
     )

@@ -10,6 +10,14 @@ from models import Category
 
 
 def export(filename, db, splits=False):
+    if not filename.endswith(".html"):
+        filename += ".html"
+
+    with open(filename, "w+") as f:
+        f.write(generate(db, splints=splits))
+
+
+def generate(db, splits=False):
     sess = Session(db)
     categories = []
     categories_db = sess.scalars(Select(Category).order_by(Category.name.asc())).all()
@@ -62,14 +70,6 @@ def export(filename, db, splits=False):
     sess.close()
 
     env = Environment(loader=PackageLoader("exports"), autoescape=select_autoescape())
-    template = env.get_template("results.html")
-
-    if not filename.endswith(".html"):
-        filename += ".html"
-
-    with open(filename, "w+") as f:
-        f.write(
-            template.render(
-                event=html_common.get_event(db), categories=categories, splits=splits
-            )
-        )
+    return env.get_template("results.html").render(
+        event=html_common.get_event(db), categories=categories, splits=splits
+    )

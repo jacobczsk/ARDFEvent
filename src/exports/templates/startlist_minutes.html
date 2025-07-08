@@ -57,27 +57,24 @@
 
 <body>
     <h1>{{ event.name }}</h1>
-    <h2>Startovka</h2>
-    <span>Datum: {{ event.date }}<br>
-        První start: {{ event.first_start }}<br>
-        Pořadatel: {{ event.organizer }}<br>
-        Limit: {{ event.limit }} min<br>
-        Pásmo: {{ event.band }}
-    </span>
-    <br><br>
+    <h2>Startovka po minutách</h2>
+    <br>
     <table>
         <tbody>
-            {% for category in categories %}
+            {% for minute in minutes %}
             <tr>
-                <td colspan="">
-                    <h3 style="display: inline-block;">{{ category.name }}</h3>
-                    <span>{{ category.controls }}</span>
+                <td colspan="4">
+                    <hr>
                 </td>
             </tr>
-            {% for runner in category.runners %}
             <tr>
-                <td>{{ runner.starttime_abs }}</td>
-                <td>{{ runner.starttime_rel }}</td>
+                <td colspan="4">
+                    <h3 style="display: inline-block;">{{ minute.abs }} / {{ minute.rel }}</h3>
+                </td>
+            </tr>
+            {% for runner in minute.runners %}
+            <tr>
+                <td>{{ runner.category }}</td>
                 <td>{{ runner.name }}</td>
                 <td>{{ runner.reg }}</td>
                 <td>{{ runner.si }}</td>
