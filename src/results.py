@@ -160,41 +160,29 @@ def calculate_category(db: Engine, name: str, include_unknown: bool = False):
             )
         )
 
-    ok = filter(lambda x: x.status == "OK", results)
+    ok = list(filter(lambda x: x.status == "OK", results))
     nok = list(filter(lambda x: x.status != "OK", results))
     nok.sort(key=lambda x: x.name)
 
-    ok_dict = {}
-
-    for runner in ok:
-        if str(runner.tx) in ok_dict:
-            ok_dict[str(runner.tx)].append(runner)
-        else:
-            ok_dict[str(runner.tx)] = [runner]
-
-    keys = list(ok_dict.keys())
-    keys.sort()
-    keys.reverse()
-
-    ok_dict = {i: ok_dict[i] for i in keys}
-
-    final_results = []
     i = 0
     lastplace = 0
 
-    for key in ok_dict:
-        ok_dict[key].sort(key=lambda x: x.time)
-        lasttime = 0
-        for runner in ok_dict[key]:
-            i += 1
-            if not runner.time == lasttime:
-                place = i
-            else:
-                place = lastplace
-            runner.place = place
-            lasttime = runner.time
-            lastplace = place
-        final_results += ok_dict[key]
+    ok.sort(key=lambda x: (-x.tx, x.time, x.name))
+
+    lasttime = 0
+    lasttx = 0
+    for runner in ok:
+        i += 1
+        if runner.time == lasttime and runner.tx == lasttx:
+            place = lastplace
+        else:
+            place = i
+        runner.place = place
+        lasttime = runner.time
+        lasttx = runner.tx
+        lastplace = place
+
+    final_results = ok
 
     final_results += nok
 

@@ -3,7 +3,13 @@ import time
 from datetime import timedelta
 
 from dateutil.parser import parser
-from PySide6.QtWidgets import QDateTimeEdit, QFormLayout, QPushButton, QSpinBox, QWidget
+from PySide6.QtWidgets import (
+    QDateTimeEdit,
+    QDoubleSpinBox,
+    QFormLayout,
+    QPushButton,
+    QWidget,
+)
 from sqlalchemy import Select
 from sqlalchemy.orm import Session
 
@@ -21,7 +27,7 @@ class StartlistDrawWindow(QWidget):
         self.setLayout(self.mainlay)
         self.setWindowTitle("Startovní listina")
 
-        self.base_interval_edit = QSpinBox()
+        self.base_interval_edit = QDoubleSpinBox()
         self.base_interval_edit.setSingleStep(0.5)
         self.mainlay.addRow("Startovní interval", self.base_interval_edit)
 

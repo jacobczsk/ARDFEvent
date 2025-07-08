@@ -4,7 +4,6 @@ from PySide6.QtWidgets import (
     QFileDialog,
     QHBoxLayout,
     QHeaderView,
-    QInputDialog,
     QMenu,
     QPushButton,
     QTableWidget,
@@ -20,6 +19,7 @@ import exports.json_results as res_json
 import exports.xml_results as res_xml
 import results
 from models import Category
+from ui.previewwin import PreviewWindow
 
 
 class ResultsWindow(QWidget):
@@ -27,6 +27,7 @@ class ResultsWindow(QWidget):
         super().__init__()
 
         self.mw = mw
+        self.pws = []
 
         lay = QVBoxLayout()
         self.setLayout(lay)
@@ -51,21 +52,10 @@ class ResultsWindow(QWidget):
         lay.addWidget(self.results_table)
 
     def _export_html_splits(self):
-
-        fn = QFileDialog.getSaveFileName(
-            self, "Export mezičasů do HTML", filter=("HTML (*.html)")
-        )[0]
-
-        if fn:
-            res_html.export(fn, self.mw.db, True)
+        self.pws.append(PreviewWindow(res_html.generate(self.mw.db, True)))
 
     def _export_html(self):
-        fn = QFileDialog.getSaveFileName(
-            self, "Export výsledků do HTML", filter=("HTML (*.html)")
-        )[0]
-
-        if fn:
-            res_html.export(fn, self.mw.db)
+        self.pws.append(PreviewWindow(res_html.generate(self.mw.db, False)))
 
     def _export_iof_xml(self):
         fn = QFileDialog.getSaveFileName(

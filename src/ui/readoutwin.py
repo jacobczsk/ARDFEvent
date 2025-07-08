@@ -92,12 +92,12 @@ class ReadoutWindow(QWidget):
         self.double_print_chk = QCheckBox()
         portslay.addRow("Dvojtisk", self.double_print_chk)
 
-        self.log = QTextBrowser()
-        lay.addWidget(self.log)
-
         startreadout_btn = QPushButton("Spustit/vypnout")
         startreadout_btn.clicked.connect(self._toggle_readout)
         lay.addWidget(startreadout_btn)
+
+        self.log = QTextBrowser()
+        lay.addWidget(self.log)
 
     def _show_si_error(self):
         QMessageBox.critical(self, "Chyba", "Zkuste to znovu")

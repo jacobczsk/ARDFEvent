@@ -51,7 +51,7 @@ class ROBisWindow(QWidget):
         lay.addRow(QLabel(""))
 
         self.download_btn = QPushButton(
-            "Stáhnout přihlášky, kategorie - Pozor! Tato akce smaže všechny stávající kategorie a závodníky!"
+            "Stáhnout přihlášky, kategorie - Pozor! Tato akce smaže všechny stávající závodníky!"
         )
         self.download_btn.clicked.connect(self._download)
         lay.addRow(self.download_btn)
@@ -105,13 +105,6 @@ class ROBisWindow(QWidget):
         response = requests.get(
             f"https://rob-is.cz/api/?type=json&name=event&event_id={self.id_edit.value()}",
             headers={"Race-Api-Key": self.api_edit.text()},
-            cookies={
-                "authToken": QInputDialog.getText(
-                    self,
-                    "Přihlášení",
-                    "Zadejte autentizační token (cookie authToken v prohlížeči)",
-                )[0]
-            },
         )
         if response.status_code != 200:
             QMessageBox.critical(
@@ -138,17 +131,18 @@ class ROBisWindow(QWidget):
         )
 
         sess = Session(self.mw.db)
-        sess.execute(Delete(Category))
         sess.execute(Delete(Runner))
-        sess.add_all(
-            [
-                Category(
-                    name=cat["category_name"],
-                    controls=[],
+
+        for cat in race["categories"]:
+            if not len(
+                sess.scalars(
+                    Select(Category).where(Category.name == cat["category_name"])
+                ).all()
+            ):
+                Category(name=cat["category_name"], controls=[], display_controls="")
+                self.log.append(
+                    f"{datetime.now().strftime('%H:%M:%S')} - Přidávám kategorii {cat['category_name']}"
                 )
-                for cat in race["categories"]
-            ]
-        )
 
         for runner in race["competitors"]:
             sess.add(

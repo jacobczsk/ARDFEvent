@@ -13,10 +13,11 @@ from sqlalchemy import Select
 from sqlalchemy.orm import Session
 
 import exports.html_startlist as stl_html
+import exports.html_startlist_minutes as stl_min_html
 import exports.robis_csv_startlist as stl_robis_csv
 import exports.xml_startlist as stl_xml
-from models import Category, Runner
-from ui import startlistdrawwin
+from models import Runner
+from ui.previewwin import PreviewWindow
 
 
 class StartlistWindow(QWidget):
@@ -24,6 +25,7 @@ class StartlistWindow(QWidget):
         super().__init__()
 
         self.mw = mw
+        self.pws = []
 
         lay = QVBoxLayout()
         self.setLayout(lay)
@@ -32,7 +34,8 @@ class StartlistWindow(QWidget):
         lay.addLayout(btn_lay)
 
         export_menu = QMenu(self)
-        export_menu.addAction("HTML", self._export_html)
+        export_menu.addAction("HTML po kategoriích", self._export_html)
+        export_menu.addAction("HTML po minutách", self._export_html_minutes)
         export_menu.addAction("CSV pro ROBis", self._export_robis_csv)
         export_menu.addAction("IOF XML 3.0", self._export_iof_xml)
 
@@ -51,15 +54,10 @@ class StartlistWindow(QWidget):
         lay.addWidget(self.startlist_table)
 
     def _export_html(self):
-        fn = QFileDialog.getSaveFileName(
-            self, "Export startovky do HTML", filter=("HTML (*.html)")
-        )[0]
+        self.pws.append(PreviewWindow(stl_html.generate(self.mw.db)))
 
-        if fn:
-            stl_html.export(
-                fn,
-                self.mw.db,
-            )
+    def _export_html_minutes(self):
+        self.pws.append(PreviewWindow(stl_min_html.generate(self.mw.db)))
 
     def _export_robis_csv(self):
         fn = QFileDialog.getSaveFileName(
@@ -89,49 +87,32 @@ class StartlistWindow(QWidget):
 
     def _update_startlist(self):
         sess = Session(self.mw.db)
-        categories = sess.scalars(Select(Category).order_by(Category.name.asc())).all()
 
+        self.startlist_table.setSortingEnabled(True)
         self.startlist_table.horizontalHeader().setSectionResizeMode(
             QHeaderView.ResizeMode.ResizeToContents
         )
         self.startlist_table.clear()
-        self.startlist_table.setColumnCount(4)
+        self.startlist_table.setColumnCount(5)
+        self.startlist_table.setHorizontalHeaderLabels(
+            ["Čas startu", "Jméno", "Kategorie", "Index", "SI"]
+        )
         self.startlist_table.setRowCount(1000)
 
         row = 0
 
-        for category in categories:
-            cat_name = QTableWidgetItem(category.name)
-            f = cat_name.font()
-            f.setBold(True)
-            f.setPointSize(15)
-            cat_name.setFont(f)
+        for person in sess.scalars(Select(Runner)).all():
+            starttime = person.startlist_time
+            if starttime is None:
+                starttime = "-"
+            else:
+                starttime = starttime.strftime("%H:%M:%S")
+            self.startlist_table.setItem(row, 0, QTableWidgetItem(starttime))
+            self.startlist_table.setItem(row, 1, QTableWidgetItem(person.name))
+            self.startlist_table.setItem(row, 2, QTableWidgetItem(person.category.name))
+            self.startlist_table.setItem(row, 3, QTableWidgetItem(person.reg))
+            self.startlist_table.setItem(row, 4, QTableWidgetItem(str(person.si)))
 
-            self.startlist_table.setItem(row, 0, cat_name)
-            self.startlist_table.setSpan(row, 1, 1, 3)
-
-            self.startlist_table.setItem(
-                row, 1, QTableWidgetItem(category.display_controls)
-            )
-
-            row += 1
-
-            for person in sess.scalars(
-                Select(Runner)
-                .where(Runner.category == category)
-                .order_by(Runner.startlist_time.asc())
-            ).all():
-                starttime = person.startlist_time
-                if starttime is None:
-                    starttime = "-"
-                else:
-                    starttime = starttime.strftime("%H:%M:%S")
-                self.startlist_table.setItem(row, 0, QTableWidgetItem(person.name))
-                self.startlist_table.setItem(row, 1, QTableWidgetItem(person.reg))
-                self.startlist_table.setItem(row, 2, QTableWidgetItem(str(person.si)))
-                self.startlist_table.setItem(row, 3, QTableWidgetItem(starttime))
-
-                row += 1
             row += 1
 
         sess.close()
@@ -139,5 +120,4 @@ class StartlistWindow(QWidget):
     def _show(self):
         self._update_startlist()
 
-        self.startlist_table.horizontalHeader().hide()
         self.startlist_table.verticalHeader().hide()
