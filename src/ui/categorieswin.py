@@ -118,7 +118,7 @@ class CategoriesWindow(QWidget):
             return
 
         sess = Session(self.mw.db)
-        sess.add(Category(name=name, controls=[]))
+        sess.add(Category(name=name, controls=[], display_controls=""))
         sess.commit()
         sess.close()
 
