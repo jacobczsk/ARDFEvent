@@ -139,7 +139,11 @@ class ROBisWindow(QWidget):
                     Select(Category).where(Category.name == cat["category_name"])
                 ).all()
             ):
-                Category(name=cat["category_name"], controls=[], display_controls="")
+                sess.add(
+                    Category(
+                        name=cat["category_name"], controls=[], display_controls=""
+                    )
+                )
                 self.log.append(
                     f"{datetime.now().strftime('%H:%M:%S')} - Přidávám kategorii {cat['category_name']}"
                 )
