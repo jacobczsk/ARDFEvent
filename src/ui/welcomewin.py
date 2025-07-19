@@ -49,9 +49,7 @@ class WelcomeWindow(QWidget):
 
         for file in (Path.home() / ".ardfevent").glob("*.sqlite"):
             try:
-                self.db = sqlalchemy.create_engine(
-                    f"sqlite:///{file}", max_overflow=-1
-                )
+                self.db = sqlalchemy.create_engine(f"sqlite:///{file}", max_overflow=-1)
 
                 title = f"{datetime.fromisoformat(api.get_basic_info(self.db)["date_tzero"]).strftime('%d.%m.%Y %H:%M')} - {api.get_basic_info(self.db)["name"]} ({file.name})"
                 self.races.append((title, file))
@@ -61,7 +59,7 @@ class WelcomeWindow(QWidget):
                 ...
 
     def _new_race(self):
-        title, ok = QInputDialog.getText(self, "Nový závod", "Zadejte název závodu")
+        title, ok = QInputDialog.getText(self, "Nový závod", "Zadejte ID závodu")
         if ok and title:
             file = Path.home() / ".ardfevent" / f"{title}.sqlite"
             if not file.exists():

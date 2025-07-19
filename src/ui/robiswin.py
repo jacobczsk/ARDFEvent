@@ -212,6 +212,7 @@ class ROBisWindow(QWidget):
                         "si_number": result.si,
                         "last_name": result.name.split(", ")[0],
                         "first_name": result.name.split(", ")[1],
+                        "category_name": category.name,
                         "result": {
                             "run_time": results.format_delta(
                                 timedelta(seconds=result.time)
