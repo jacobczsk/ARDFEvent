@@ -52,6 +52,11 @@ class StartlistDrawWindow(QWidget):
         categories = sess.scalars(Select(Category)).all()
 
         for cat in categories:
+            if not len(
+                sess.scalars(Select(Runner).where(Runner.category == cat)).all()
+            ):
+                continue
+
             cat_edit = QDateTimeEdit()
             cat_edit.setDateTime(zero)
 
