@@ -27,6 +27,9 @@ def generate(db):
     ).all()
 
     for minute in minutes_db:
+        if not minute:
+            continue
+
         runners = []
         for person in sess.scalars(
             Select(Runner)

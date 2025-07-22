@@ -99,6 +99,11 @@ class ResultsWindow(QWidget):
         row = 0
 
         for category in categories:
+            results_cat = results.calculate_category(self.mw.db, category.name, True)
+
+            if not len(results_cat):
+                continue
+
             cat_name = QTableWidgetItem(category.name)
             f = cat_name.font()
             f.setBold(True)
@@ -112,8 +117,6 @@ class ResultsWindow(QWidget):
             self.results_table.setItem(row, 1, QTableWidgetItem(", ".join(controls)))
 
             row += 1
-
-            results_cat = results.calculate_category(self.mw.db, category.name, True)
 
             for person in results_cat:
                 if person.place == 0:

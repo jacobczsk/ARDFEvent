@@ -42,16 +42,19 @@ def generate(db):
                     "reg": person.reg,
                     "si": person.si,
                     "starttime_abs": starttime_txt,
-                    "starttime_rel": format_delta((starttime - date_tzero)),
+                    "starttime_rel": (
+                        format_delta((starttime - date_tzero)) if starttime else "-"
+                    ),
                 }
             )
-        categories.append(
-            {
-                "name": category.name,
-                "controls": category.display_controls,
-                "runners": runners,
-            }
-        )
+        if len(runners):
+            categories.append(
+                {
+                    "name": category.name,
+                    "controls": category.display_controls,
+                    "runners": runners,
+                }
+            )
 
     sess.close()
 
