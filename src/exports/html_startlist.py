@@ -43,7 +43,12 @@ def generate(db):
                     "si": person.si,
                     "starttime_abs": starttime_txt,
                     "starttime_rel": (
-                        format_delta((starttime - date_tzero)) if starttime else "-"
+                        format_delta(
+                            starttime.replace(tzinfo=None)
+                            - date_tzero.replace(tzinfo=None)
+                        )
+                        if starttime
+                        else "-"
                     ),
                 }
             )

@@ -58,17 +58,17 @@ def set_basic_info(database: Engine, data: dict):
 
 
 def get_registered_runners():
-    with open(Path.home() / ".ardf/runners.json", "r") as rf:
+    with open(Path.home() / ".ardfevent/runners.json", "r") as rf:
         return json.load(rf)
 
 
 def get_registered_names():
-    with open(Path.home() / ".ardf/runners.json", "r") as rf:
+    with open(Path.home() / ".ardfevent/runners.json", "r") as rf:
         return list(map(lambda x: x["name"], json.load(rf)))
 
 
 def get_clubs():
-    with open(Path.home() / ".ardf/clubs.json", "r") as cf:
+    with open(Path.home() / ".ardfevent/clubs.json", "r") as cf:
         return json.load(cf)
 
 

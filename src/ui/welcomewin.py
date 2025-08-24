@@ -2,6 +2,7 @@ from datetime import datetime
 from pathlib import Path
 
 import sqlalchemy
+from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import (
     QInputDialog,
     QLabel,
@@ -23,10 +24,14 @@ class WelcomeWindow(QWidget):
 
         self.mw = mw
 
+        self.setWindowTitle("JJ ARDFEvent")
+
         lay = QVBoxLayout()
         self.setLayout(lay)
 
-        lay.addWidget(QLabel("Vítejte v aplikaci ARDFEvent!"))
+        img_lbl = QLabel()
+        img_lbl.setPixmap(QPixmap(":/icons/logo.png"))
+        lay.addWidget(img_lbl)
 
         new_btn = QPushButton("Nový závod")
         new_btn.clicked.connect(self._new_race)

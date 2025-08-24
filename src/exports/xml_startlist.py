@@ -58,7 +58,7 @@ def export(filename, db):
             start = ET.SubElement(runner_start, "Start")
             ET.SubElement(start, "ControlCard").text = str(person.si)
 
-            if starttime is not None:
+            if person.startlist_time:
                 ET.SubElement(start, "StartTime").text = str(
                     person.startlist_time.isoformat()
                 )

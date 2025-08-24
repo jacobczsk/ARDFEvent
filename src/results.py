@@ -4,7 +4,7 @@ from sqlalchemy import Engine, Select
 from sqlalchemy.orm import Session
 
 import api
-from models import Category, Punch
+from models import Category, Control, Punch
 
 
 class Result:
@@ -59,7 +59,7 @@ def calculate_category(db: Engine, name: str, include_unknown: bool = False):
                     "DNS",
                     [],
                     runner.club,
-                    start,
+                    datetime.now(),
                 )
             )
             continue
@@ -74,7 +74,7 @@ def calculate_category(db: Engine, name: str, include_unknown: bool = False):
                     "DSQ",
                     [],
                     runner.club,
-                    start,
+                    datetime.fromtimestamp(0),
                 )
             )
             continue
@@ -115,9 +115,13 @@ def calculate_category(db: Engine, name: str, include_unknown: bool = False):
             elif punch.code in loc_controls:
                 tx += 1
                 control = list(filter(lambda c: c.code == punch.code, controls))
-                order.append((control[0].name, punch.time))
+                order.append((control[0].name, punch.time, "OK"))
             else:
-                continue
+                control = sess.scalars(
+                    Select(Control).where(Control.code == punch.code)
+                ).one_or_none()
+                if control:
+                    order.append((f"{control.name}+", punch.time, "AP"))
 
             if punch.code in loc_mandatory:
                 mandatory_cnt += 1
@@ -135,8 +139,10 @@ def calculate_category(db: Engine, name: str, include_unknown: bool = False):
 
         if not start:
             start = api.get_basic_info(db)["date_tzero"]
-        elif not finish:
+
+        if not finish:
             status = "DNF"
+            time = 0
         else:
             time = (finish - start).seconds
 

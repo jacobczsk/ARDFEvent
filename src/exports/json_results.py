@@ -54,11 +54,11 @@ def export(db: Engine) -> str:
             for punch in person.order:
                 order.append(
                     {
-                        "alias": punch[0],
+                        "alias": punch[0].strip("+"),
                         "control_type": "CONTROL" if punch[0] != "M" else "BEACON",
-                        "punch_status": "OK",
+                        "punch_status": punch[2],
                         "split_time": results.format_delta(punch[1] - last),
-                        "code": controls_list[punch[0]],
+                        "code": controls_list[punch[0].strip("+")],
                     }
                 )
                 last = punch[1]

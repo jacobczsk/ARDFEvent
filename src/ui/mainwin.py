@@ -1,3 +1,5 @@
+import sys
+
 import sqlalchemy
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QMainWindow, QTabWidget
@@ -39,7 +41,7 @@ class MainWindow(QMainWindow):
         )
         models.Base.metadata.create_all(self.db)
 
-        self.setWindowTitle(f"ARDFEvent - {api.get_basic_info(self.db)["name"]}")
+        self.setWindowTitle(f"JJ ARDFEvent - {api.get_basic_info(self.db)["name"]}")
 
         self.basicinfo_win = basicinfowin.BasicInfoWindow(self)
         self.controls_win = controlswin.ControlsWindow(self)

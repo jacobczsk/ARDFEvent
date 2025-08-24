@@ -1,12 +1,12 @@
-import io
 import json
 from datetime import datetime, timedelta
 
 import requests
 from dateutil.parser import parser
+from PySide6.QtCore import QByteArray, QUrl, Slot
+from PySide6.QtNetwork import QNetworkAccessManager, QNetworkReply, QNetworkRequest
 from PySide6.QtWidgets import (
     QFormLayout,
-    QInputDialog,
     QLabel,
     QLineEdit,
     QMessageBox,
@@ -70,6 +70,9 @@ class ROBisWindow(QWidget):
 
         self.log = QTextBrowser()
         lay.addWidget(self.log)
+
+        self.nmmanager = QNetworkAccessManager(self)
+        self.nmmanager.finished.connect(self.handle_online_res_reply)
 
     def _on_ok(self):
         api.set_basic_info(
@@ -168,6 +171,12 @@ class ROBisWindow(QWidget):
 
         self.log.append(f"{datetime.now().strftime("%H:%M:%S")} - Import OK")
 
+    @Slot(QNetworkReply)
+    def handle_online_res_reply(self, reply: QNetworkReply):
+        self.log.append(
+            f"{datetime.now().strftime("%H:%M:%S")} - Online výsledky: {"OK" if reply.error() == QNetworkReply.NetworkError.NoError else f"ERROR: {reply.error().name}"} {reply.readAll().data().decode("utf-8")}"
+        )
+
     def _send_online_readout(self, db, si: int, all: bool = False):
         sess = Session(db)
 
@@ -182,12 +191,13 @@ class ROBisWindow(QWidget):
             runner = None
             categories = sess.scalars(Select(Category)).all()
 
-        data = []
-
         for category in categories:
+            data = []
             results_cat = results.calculate_category(db, category.name)
 
             for result in results_cat:
+                if runner and runner.reg != result.reg:
+                    continue
                 order = []
                 last = result.start
                 for punch in result.order:
@@ -195,7 +205,7 @@ class ROBisWindow(QWidget):
                         {
                             "code": punch[0],
                             "control_type": "CONTROL" if punch[0] != "M" else "BEACON",
-                            "punch_status": "OK",
+                            "punch_status": punch[2],
                             "split_time": results.format_delta(punch[1] - last),
                         }
                     )
@@ -221,7 +231,6 @@ class ROBisWindow(QWidget):
                             "run_time": results.format_delta(
                                 timedelta(seconds=result.time)
                             ),
-                            "place": result.place,
                             "controls_num": result.tx,
                             "result_status": result.status,
                             "punches": order,
@@ -231,15 +240,17 @@ class ROBisWindow(QWidget):
 
             sess.close()
 
-        response = requests.put(
-            "https://rob-is.cz/api/results/?name=json",
-            data=json.dumps(data).encode("utf-8"),
-            headers={
-                "Race-Api-Key": api.get_basic_info(db)["robis_api"],
-                "Content-Type": "application/json",
-            },
-        )
+            json_data = json.dumps(data)
+            byte_data = QByteArray(json_data.encode("utf-8"))
 
-        self.log.append(
-            f"{datetime.now().strftime("%H:%M:%S")} - Online výsledky: {response.status_code} {response.text}"
-        )
+            request = QNetworkRequest(QUrl("https://rob-is.cz/api/results/?name=json"))
+
+            request.setHeader(
+                QNetworkRequest.KnownHeaders.ContentTypeHeader, "application/json"
+            )
+            request.setRawHeader(
+                QByteArray("Race-Api-Key"),
+                QByteArray(api.get_basic_info(db)["robis_api"]),
+            )
+
+            self.nmmanager.put(request, byte_data)

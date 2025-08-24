@@ -10,7 +10,7 @@ def get_xml_root(type: str):
             "xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance",
             "iofVersion": "3.0",
             "createTime": datetime.now().isoformat(timespec="seconds"),
-            "creator": "ARDFEvent",
+            "creator": "JJ ARDFEvent",
         },
     )
     return root

@@ -1,5 +1,0 @@
---- DB v. 0.1 to DB v. 0.2 ---
-ALTER TABLE runners ADD COLUMN ocheck_processed boolean default false;
-ALTER TABLE runners ADD COLUMN manual_disk boolean default false;
-ALTER TABLE runners ADD COLUMN manual_dns boolean default false;
-ALTER TABLE categories ADD COLUMN display_controls VARCHAR(255);

@@ -24,7 +24,15 @@ def generate(db, splits=False):
 
     for category in categories_db:
         runners = []
-        results_cat = results.calculate_category(db, category.name)
+        results_cat = list(
+            filter(
+                lambda x: x.status != "DNS",
+                results.calculate_category(db, category.name),
+            )
+        )
+
+        if not len(results_cat):
+            continue
 
         for person in results_cat:
             if person.place == 0:
@@ -54,7 +62,16 @@ def generate(db, splits=False):
                     "reg": person.reg,
                     "time": results.format_delta(timedelta(seconds=person.time)),
                     "tx": person.tx,
-                    "order": " - ".join(map(lambda x: x[0], person.order)),
+                    "order": " - ".join(
+                        map(
+                            lambda x: (
+                                f'<span style="color: orange;">{x[0]}</span>'
+                                if x[2] == "AP"
+                                else x[0]
+                            ),
+                            person.order,
+                        ),
+                    ),
                     "splits": runner_splits,
                     "ok": person.status == "OK",
                 }

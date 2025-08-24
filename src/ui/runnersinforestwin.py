@@ -42,10 +42,11 @@ class RunnersInForestWindow(QWidget):
         self.runners_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         lay.addWidget(self.runners_table)
 
-    def _show(self):
-        now = datetime.now()
-        self.gen_label.setText(f"Generováno v {now.strftime("%H:%M:%S")}")
+    def _update(self):
+        if self.isVisible():
+            self._show()
 
+    def _show(self):
         sess = Session(self.mw.db)
         in_forest = sess.scalars(
             Select(Runner)
@@ -55,6 +56,11 @@ class RunnersInForestWindow(QWidget):
             .order_by(Runner.reg)
             .order_by(Runner.name)
         ).all()
+
+        now = datetime.now()
+        self.gen_label.setText(
+            f"Generováno v {now.strftime("%H:%M:%S")}, {len(in_forest)} osob v lese"
+        )
 
         self.runners_table.clear()
         self.runners_table.horizontalHeader().setSectionResizeMode(
@@ -70,7 +76,7 @@ class RunnersInForestWindow(QWidget):
 
             if runner.startlist_time:
                 self.runners_table.setItem(
-                    i, 3, QTableWidgetItem(format_delta(runner.startlist_time - now))
+                    i, 3, QTableWidgetItem(format_delta(now - runner.startlist_time))
                 )
             else:
                 self.runners_table.setItem(i, 3, QTableWidgetItem("-"))

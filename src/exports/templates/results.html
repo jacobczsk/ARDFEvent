@@ -108,7 +108,7 @@
                 <td>{{ runner.time }}</td>
                 <td>{{ runner.tx }} TX</td>
                 {% if not splits %}
-                <td>{{ runner.order }}</td>
+                <td>{{ runner.order|safe }}</td>
                 {% endif %}
                 {% endif %}
             </tr>
@@ -117,7 +117,7 @@
                 <td colspan="6">
                     <div class="splits">
                         {% for split in runner.splits %}
-                        <table>
+                        <table {% if split.control.endswith("+") %} style="color: orange;" {% endif %}>
                             <tbody>
                                 <tr>
                                     <td class="control_name">{{ split.control }}</td>
@@ -138,7 +138,7 @@
             {% endfor %}
         </tbody>
     </table>
-    <span id="footer">ARDFEvent, (C) Jakub Jiroutek</span>
+    <span id="footer">JJ ARDFEvent, (C) Jakub Jiroutek</span>
 </body>
 
 </html>

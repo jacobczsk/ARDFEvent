@@ -5,3 +5,4 @@ testenv
 test*
 build
 dist
+docs/docs_build/build

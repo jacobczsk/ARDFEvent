@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
 from sqlalchemy import Select
 from sqlalchemy.orm import Session
 
+import exports.csv_results as res_csv
 import exports.html_results as res_html
 import exports.json_results as res_json
 import exports.xml_results as res_xml
@@ -40,6 +41,7 @@ class ResultsWindow(QWidget):
         export_menu.addAction("HTML s mezičasy", self._export_html_splits)
         export_menu.addAction("IOF XML 3.0", self._export_iof_xml)
         export_menu.addAction("ARDF JSON", self._export_json)
+        export_menu.addAction("CSV", self._export_csv)
 
         export_btn = QPushButton("Exportovat")
         export_btn.setMenu(export_menu)
@@ -56,6 +58,19 @@ class ResultsWindow(QWidget):
 
     def _export_html(self):
         self.pws.append(PreviewWindow(res_html.generate(self.mw.db, False)))
+
+    def _export_csv(self):
+        fn = QFileDialog.getSaveFileName(
+            self,
+            "Export výsledků do CSV",
+            filter=("CSV (*.csv)"),
+        )[0]
+
+        if fn:
+            res_csv.export(
+                fn,
+                self.mw.db,
+            )
 
     def _export_iof_xml(self):
         fn = QFileDialog.getSaveFileName(

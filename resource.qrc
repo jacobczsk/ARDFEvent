@@ -11,5 +11,8 @@
     <file>icons/runners.png</file>
     <file>icons/startlist.png</file>
     <file>icons/tx.png</file>
+    <file>icons/logo.png</file>
+    <file>icons/icon.ico</file>
+    <file>sound/error.wav</file>
 </qresource>
 </RCC>

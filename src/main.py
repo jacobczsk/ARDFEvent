@@ -1,6 +1,7 @@
 import threading
 from pathlib import Path
 
+from PySide6.QtGui import QIcon, QPixmap
 from PySide6.QtWidgets import QApplication
 
 import registration
@@ -16,6 +17,7 @@ if __name__ == "__main__":
     t.start()
 
     app = QApplication()
+    app.setWindowIcon(QIcon(":/icons/icon.ico"))
     win = mainwin.MainWindow()
 
     app.exec()
