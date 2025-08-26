@@ -98,7 +98,7 @@ def calculate_category(db: Engine, name: str, include_unknown: bool = False):
                         runner.reg,
                         runner.si,
                         0,
-                        0,
+                        0 if not start else (datetime.now() - start).total_seconds(),
                         "?",
                         [],
                         runner.club,

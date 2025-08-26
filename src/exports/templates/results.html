@@ -100,16 +100,14 @@
                 </td>
             </tr>
             {% for runner in category.runners %}
-            <tr>
+            <tr {% if not runner.ok %} style="font-style: italic; color: darkgray;" {% endif %}>
                 <td>{{ runner.place }}</td>
                 <td>{{ runner.name }}</td>
                 <td>{{ runner.reg }}</td>
-                {% if runner.ok %}
                 <td>{{ runner.time }}</td>
                 <td>{{ runner.tx }} TX</td>
                 {% if not splits %}
                 <td>{{ runner.order|safe }}</td>
-                {% endif %}
                 {% endif %}
             </tr>
             {% if splits %}

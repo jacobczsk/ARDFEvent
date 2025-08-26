@@ -1,9 +1,12 @@
 from datetime import timedelta
 
+from PySide6.QtCore import QThread
 from PySide6.QtWidgets import (
     QFileDialog,
     QHBoxLayout,
     QHeaderView,
+    QInputDialog,
+    QLabel,
     QMenu,
     QPushButton,
     QTableWidget,
@@ -21,6 +24,23 @@ import exports.xml_results as res_xml
 import results
 from models import Category
 from ui.previewwin import PreviewWindow
+from web.webserver import ARDFEventServer
+
+
+class WebServerThread(QThread):
+    def __init__(self, db):
+        super().__init__()
+        self.db = db
+        self.server = ARDFEventServer(db)
+
+    def set_ann(self, ann):
+        self.server.announcement = ann
+
+    def run(self):
+        self.server.run_server()
+
+    def terminate(self):
+        return super().terminate()
 
 
 class ResultsWindow(QWidget):
@@ -29,6 +49,7 @@ class ResultsWindow(QWidget):
 
         self.mw = mw
         self.pws = []
+        self.proc = None
 
         lay = QVBoxLayout()
         self.setLayout(lay)
@@ -47,11 +68,46 @@ class ResultsWindow(QWidget):
         export_btn.setMenu(export_menu)
         btn_lay.addWidget(export_btn)
 
+        self.webserverbtn = QPushButton("Spustit webový server")
+        self.webserverbtn.clicked.connect(self._toggle_webserver)
+        btn_lay.addWidget(self.webserverbtn)
+
+        self.state_label = QLabel()
+        btn_lay.addWidget(self.state_label)
+
+        self.annbtn = QPushButton("Změna hlášení")
+        self.annbtn.clicked.connect(self._set_webserver_announcement)
+        btn_lay.addWidget(self.annbtn)
+
+        self._proc_stopped()
+
         btn_lay.addStretch()
 
         self.results_table = QTableWidget()
         self.results_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         lay.addWidget(self.results_table)
+
+    def _set_webserver_announcement(self):
+        ann, ok = QInputDialog.getText(self, "Změna hlášení", "Zadejte hlášení")
+
+        if self.proc and ok:
+            self.proc.set_ann(ann)
+
+    def _toggle_webserver(self):
+        if not self.proc:
+            self.webserverbtn.setDisabled(True)
+            self.proc = WebServerThread(self.mw.db)
+            self.proc.started.connect(self._proc_running)
+            self.proc.finished.connect(self._proc_stopped)
+            self.proc.start()
+
+    def _proc_running(self):
+        self.state_label.setText("Stav: Aktivní")
+        self.state_label.setStyleSheet("color: green;")
+
+    def _proc_stopped(self):
+        self.state_label.setText("Stav: Neaktivní")
+        self.state_label.setStyleSheet("color: red;")
 
     def _export_html_splits(self):
         self.pws.append(PreviewWindow(res_html.generate(self.mw.db, True)))
@@ -141,7 +197,7 @@ class ResultsWindow(QWidget):
 
                 self.results_table.setItem(row, 0, QTableWidgetItem(place))
                 self.results_table.setItem(row, 1, QTableWidgetItem(person.name))
-                if person.status == "OK":
+                if person.status not in ["?", "DNS"]:
                     self.results_table.setItem(
                         row, 2, QTableWidgetItem(f"{person.tx} TX")
                     )
@@ -168,3 +224,11 @@ class ResultsWindow(QWidget):
 
         self.results_table.horizontalHeader().hide()
         self.results_table.verticalHeader().hide()
+
+    def closeEvent(self, event) -> None:
+        try:
+            self.proc.terminate()
+            self.proc.wait()
+        except:
+            ...
+        super().closeEvent(event)

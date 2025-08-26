@@ -4,6 +4,7 @@ from pathlib import Path
 import sqlalchemy
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import (
+    QHBoxLayout,
     QInputDialog,
     QLabel,
     QListWidget,
@@ -29,9 +30,16 @@ class WelcomeWindow(QWidget):
         lay = QVBoxLayout()
         self.setLayout(lay)
 
+        logolay = QHBoxLayout()
+        logolay.addStretch()
+
         img_lbl = QLabel()
-        img_lbl.setPixmap(QPixmap(":/icons/logo.png"))
-        lay.addWidget(img_lbl)
+        img_lbl.setPixmap(QPixmap(":/icons/icon.png").scaled(150, 150))
+        logolay.addWidget(img_lbl)
+
+        logolay.addStretch()
+
+        lay.addLayout(logolay)
 
         new_btn = QPushButton("Nový závod")
         new_btn.clicked.connect(self._new_race)
@@ -62,6 +70,7 @@ class WelcomeWindow(QWidget):
                 self.races_list.addItem(QListWidgetItem(title))
             except:
                 ...
+        self.setMinimumSize(self.races_list.sizeHintForColumn(0) + 50, 300)
 
     def _new_race(self):
         title, ok = QInputDialog.getText(self, "Nový závod", "Zadejte ID závodu")
