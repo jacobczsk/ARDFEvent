@@ -1,6 +1,7 @@
 import json
 from datetime import datetime, timedelta
 from pathlib import Path
+import sys
 from wsgiref.simple_server import make_server
 
 from pyramid.config import Configurator
@@ -83,7 +84,7 @@ class ARDFEventServer:
         with Configurator() as config:
             config.add_route("static", "/static")
             config.add_static_view(
-                name="static", path=str((Path(__file__).parent / "static").absolute())
+                name="static", path=str((Path(__file__).parent / "static").absolute()) if not getattr(sys, 'frozen', False) else str(Path(sys._MEIPASS) / "web" / "static")
             )
             config.add_route("results", "/api/results")
             config.add_view(self.results, route_name="results")
