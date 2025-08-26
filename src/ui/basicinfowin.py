@@ -1,7 +1,6 @@
 from datetime import datetime
 
 from dateutil.parser import parser
-from PySide6.QtGui import Qt
 from PySide6.QtWidgets import (
     QComboBox,
     QDateTimeEdit,
@@ -20,7 +19,6 @@ class BasicInfoWindow(QWidget):
         super().__init__()
 
         self.mw = mw
-        self.setWindowTitle("Základní info")
 
         lay = QFormLayout()
         self.setLayout(lay)
@@ -35,6 +33,7 @@ class BasicInfoWindow(QWidget):
         lay.addRow("Pořadatel", self.org_edit)
 
         self.limit_edit = QSpinBox()
+        self.limit_edit.setRange(0, 10000)
         lay.addRow("Limit", self.limit_edit)
 
         self.band_select = QComboBox()
@@ -56,9 +55,8 @@ class BasicInfoWindow(QWidget):
                 "band": self.band_select.currentText(),
             },
         )
-        self.close()
 
-    def show(self):
+    def _show(self):
         basic_info = api.get_basic_info(self.mw.db)
 
         if basic_info["name"]:
@@ -77,5 +75,3 @@ class BasicInfoWindow(QWidget):
 
         if basic_info["band"] in api.BANDS:
             self.band_select.setCurrentIndex(api.BANDS.index(basic_info["band"]))
-
-        super().show()

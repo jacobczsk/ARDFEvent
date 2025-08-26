@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Výsledky - {{ event.name }}</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 7mm 7mm 7mm 7mm;
+        }
+
+        @media screen {
+            #footer {
+                display: none;
+            }
+        }
+
+        @media print {
+            #footer {
+                position: fixed;
+                bottom: 0;
+                width: 100%;
+                text-align: center;
+            }
+        }
+
+
+        * {
+            font-family: monospace;
+        }
+
+        h1 {
+            font-size: 1.75em;
+            text-align: center;
+            margin-bottom: 0;
+        }
+
+        h2 {
+            font-size: 1.5em;
+            text-align: center;
+            margin-top: 0.5em;
+        }
+
+        h3 {
+            margin-bottom: 0.25em;
+            margin-top: 0.5em;
+            font-size: 1.3em;
+        }
+
+        td {
+            padding-right: 2em;
+            white-space: nowrap;
+        }
+
+        .control_name {
+            font-weight: bold;
+            margin-right: .2em;
+            padding-right: 0;
+            width: 1.2em;
+            text-align: right;
+            font-size: small;
+        }
+
+        .control_time {
+            margin-right: .3em;
+            padding-right: 0;
+            width: 4.5em;
+            text-align: right;
+            font-size: small;
+        }
+
+        .splits {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: wrap;
+            justify-content: left;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>{{ event.name }}</h1>
+    <h2>Výsledky</h2>
+    <span>Datum: {{ event.date }}<br>
+        První start: {{ event.first_start }}<br>
+        Pořadatel: {{ event.organizer }}<br>
+        Limit: {{ event.limit }} min<br>
+        Pásmo: {{ event.band }}
+    </span>
+    <br><br>
+    <table>
+        <tbody>
+            {% for category in categories %}
+            <tr>
+                <td colspan="6">
+                    <h3 style="display: inline-block;">{{ category.name }}</h3>
+                    <span>{{ category.controls }}</span>
+                </td>
+            </tr>
+            {% for runner in category.runners %}
+            <tr {% if not runner.ok %} style="font-style: italic; color: darkgray;" {% endif %}>
+                <td>{{ runner.place }}</td>
+                <td>{{ runner.name }}</td>
+                <td>{{ runner.reg }}</td>
+                <td>{{ runner.time }}</td>
+                <td>{{ runner.tx }} TX</td>
+                {% if not splits %}
+                <td>{{ runner.order|safe }}</td>
+                {% endif %}
+            </tr>
+            {% if splits %}
+            <tr>
+                <td colspan="6">
+                    <div class="splits">
+                        {% for split in runner.splits %}
+                        <table {% if split.control.endswith("+") %} style="color: orange;" {% endif %}>
+                            <tbody>
+                                <tr>
+                                    <td class="control_name">{{ split.control }}</td>
+                                    <td class="control_time">{{ split.time }}</td>
+                                </tr>
+                                <tr>
+                                    <td></td>
+                                    <td class="control_time">+{{ split.split }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        {% endfor %}
+                    </div>
+                </td>
+            </tr>
+            {% endif %}
+            {% endfor %}
+            {% endfor %}
+        </tbody>
+    </table>
+    <span id="footer">JJ ARDFEvent, (C) Jakub Jiroutek</span>
+</body>
+
+</html>

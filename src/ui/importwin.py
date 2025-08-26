@@ -8,11 +8,12 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from sqlalchemy.orm import Session
 from sqlalchemy import Delete, Select
+from sqlalchemy.orm import Session
 
-import api, import_runners
-from models import Runner, Category
+import api
+import import_runners
+from models import Category, Runner
 
 
 class ImportWindow(QWidget):
@@ -30,7 +31,7 @@ class ImportWindow(QWidget):
 
         lay.addWidget(
             QLabel(
-                'Soubor musí obsahovat hlavičku "Jméno;Registrace;SI;Kategorie", podle toho se musí řídit další sloupce.'
+                'Soubor musí obsahovat hlavičku "Jméno;Příjmení;Registrace;SI;Kategorie", podle toho se musí řídit další sloupce.'
             )
         )
         lay.addWidget(QLabel("Pro import z ROBis využijte okno ROBis!"))
@@ -53,10 +54,10 @@ class ImportWindow(QWidget):
         for runner in data:
             runners.append(
                 import_runners.RunnerToImport(
-                    name=runner[0],
-                    reg=runner[1],
-                    si=int(runner[2]),
-                    category_name=runner[3],
+                    name=f"{runner[1]}, {runner[0]}",
+                    reg=runner[2],
+                    si=int(runner[3]),
+                    category_name=runner[4],
                     call="",
                 )
             )
@@ -80,6 +81,5 @@ class ImportWindow(QWidget):
                         f"/!\\ WAR: Závodník {runner.name} nemá platný klub {runner.reg[:3]}. Přesto se importuje."
                     )
 
-    def show(self):
-        super().show()
+    def _show(self):
         self.log.setPlainText("")

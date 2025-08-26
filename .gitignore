@@ -2,3 +2,7 @@
 __pycache__
 testenv
 *.pkl
+test*
+build
+dist
+docs/docs_build/build

@@ -1,6 +1,7 @@
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QHBoxLayout,
+    QLabel,
     QPushButton,
     QTableWidget,
     QTableWidgetItem,
@@ -22,6 +23,8 @@ class ControlsWindow(QWidget):
 
         mainlay = QVBoxLayout()
         self.setLayout(mainlay)
+
+        mainlay.addWidget(QLabel("Přednastavené kontroly:"))
 
         presetslay = QHBoxLayout()
         mainlay.addLayout(presetslay)
@@ -73,6 +76,7 @@ class ControlsWindow(QWidget):
         sess.execute(Delete(Control))
         sess.add_all(controls)
         sess.commit()
+        sess.close()
 
     def _preset_slow(self):
         self._set_controls(
@@ -202,7 +206,5 @@ class ControlsWindow(QWidget):
 
         sess.close()
 
-    def show(self):
-        super().show()
-
+    def _show(self):
         self._update_table()

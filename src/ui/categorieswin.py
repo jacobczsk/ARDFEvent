@@ -47,8 +47,15 @@ class CategoriesWindow(QWidget):
         rightlay.addLayout(detailslay)
 
         self.name_edit = QLineEdit()
-        self.name_edit.textEdited.connect(self._change_name)
+        self.name_edit.textEdited.connect(self._change)
         detailslay.addRow("Jméno", self.name_edit)
+
+        self.display_controls_edit = QLineEdit()
+        self.display_controls_edit.textEdited.connect(self._change)
+        detailslay.addRow(
+            "Před závodem zobrazené kontroly (startovka, ...)",
+            self.display_controls_edit,
+        )
 
         listslayout = QHBoxLayout()
         rightlay.addLayout(listslayout)
@@ -87,6 +94,7 @@ class CategoriesWindow(QWidget):
 
         self._update_categories()
         self._select(self.categories_list.item(0))
+        sess.close()
 
     def _update_categories(self):
         self.categories_list.clear()
@@ -110,7 +118,7 @@ class CategoriesWindow(QWidget):
             return
 
         sess = Session(self.mw.db)
-        sess.add(Category(name=name, controls=[]))
+        sess.add(Category(name=name, controls=[], display_controls=""))
         sess.commit()
         sess.close()
 
@@ -134,6 +142,7 @@ class CategoriesWindow(QWidget):
             self.selected = category.id
 
             self.name_edit.setText(category.name)
+            self.display_controls_edit.setText(category.display_controls)
 
             for control in sess.scalars(Select(Control)).all():
                 self.avail_list.addItem(QListWidgetItem(control.name))
@@ -145,7 +154,7 @@ class CategoriesWindow(QWidget):
 
         sess.close()
 
-    def _change_name(self):
+    def _change(self):
         sess = Session(self.mw.db)
         category = sess.scalars(
             Select(Category).where(Category.id == self.selected)
@@ -155,6 +164,7 @@ class CategoriesWindow(QWidget):
             return
 
         category.name = self.name_edit.text()
+        category.display_controls = self.display_controls_edit.text()
 
         sess.commit()
         sess.close()
@@ -179,13 +189,13 @@ class CategoriesWindow(QWidget):
 
         name = category.name
 
+        category.display_controls = ", ".join(map(lambda x: x.name, category.controls))
+
         sess.commit()
         sess.close()
 
         self._select(QListWidgetItem(name))
 
-    def show(self):
-        super().show()
-
+    def _show(self):
         self._update_categories()
         self._select(self.categories_list.item(0))

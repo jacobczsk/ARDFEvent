@@ -1,14 +1,14 @@
-from pathlib import Path
 import threading
+from pathlib import Path
 
+from PySide6.QtGui import QIcon, QPixmap
 from PySide6.QtWidgets import QApplication
 
 import registration
 import ui.mainwin as mainwin
 
-
 if __name__ == "__main__":
-    rootdir = Path.home() / ".ardf"
+    rootdir = Path.home() / ".ardfevent"
 
     if not rootdir.exists():
         rootdir.mkdir()
@@ -17,6 +17,7 @@ if __name__ == "__main__":
     t.start()
 
     app = QApplication()
+    app.setWindowIcon(QIcon(":/icons/icon.ico"))
     win = mainwin.MainWindow()
 
     app.exec()

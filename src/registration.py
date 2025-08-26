@@ -6,7 +6,7 @@ import requests
 
 def map_runner(orig: dict):
     return {
-        "name": f"{orig["last_name"]} {orig["first_name"]}",
+        "name": f"{orig["last_name"]}, {orig["first_name"]}",
         "reg": orig["index"],
         "si": 0,
         "byear": orig["birth_year"],
@@ -20,8 +20,8 @@ def download():
     runners_raw = requests.get("https://rob-is.cz/api/members_all/").json()[
         "all_members"
     ]
-    with open(Path.home() / ".ardf/clubs.json", "w+") as cf, open(
-        Path.home() / ".ardf/runners.json", "w+"
+    with open(Path.home() / ".ardfevent/clubs.json", "w+") as cf, open(
+        Path.home() / ".ardfevent/runners.json", "w+"
     ) as rf:
         clubs = {}
 
