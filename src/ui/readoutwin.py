@@ -189,6 +189,27 @@ class ReadoutWindow(QWidget):
         else:
             runner = runners[0]
 
+        if (
+            data["start"] or runners[0].startlist_time or datetime(1970, 1, 1)
+        ) - timedelta(hours=1) < data["check"]:
+            self.state_win.setError("CHECK ERROR")
+            if (
+                QMessageBox.warning(
+                    self,
+                    "Chyba",
+                    f"Čip {si_no} nemá CHECK - je nejspíše nevymazaný. Pokračovat?",
+                    QMessageBox.StandardButton.Yes,
+                    QMessageBox.StandardButton.No,
+                )
+                == QMessageBox.StandardButton.Yes
+            ):
+                self.state_win.setError(None)
+            else:
+                self._append_log(f"Zrušeno vyčtení.")
+                sess.close()
+                self.state_win.setError(None)
+                return
+
         sess.scalars(Select(Runner).where(Runner.si == si_no)).one().manual_dns = False
 
         if len(sess.scalars(Select(Punch).where(Punch.si == si_no)).all()) != 0:
