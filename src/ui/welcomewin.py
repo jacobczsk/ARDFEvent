@@ -49,11 +49,21 @@ class WelcomeWindow(QWidget):
         del_btn.clicked.connect(self._delete)
         lay.addWidget(del_btn)
 
+        dbstr_btn = QPushButton("Vlastní DB string")
+        dbstr_btn.clicked.connect(self._custom_dbstr)
+        lay.addWidget(dbstr_btn)
+
         self.races_list = QListWidget()
         self.races_list.itemDoubleClicked.connect(self._open_race)
         lay.addWidget(self.races_list)
 
         self._load_races()
+
+    def _custom_dbstr(self):
+        dbstr, ok = QInputDialog.getText(self, "Vlastní DB string", "Zadejte DB string")
+        if ok:
+            self.mw.show(dbstr)
+            self.close()
 
     def _load_races(self):
         self.races_list.clear()
@@ -91,7 +101,7 @@ class WelcomeWindow(QWidget):
                 },
             )
 
-            self.mw.show(file)
+            self.mw.show(f"sqlite:///{file.absolute()}/")
             self.close()
         else:
             return
@@ -118,6 +128,6 @@ class WelcomeWindow(QWidget):
     def _open_race(self, item: QListWidgetItem):
         for title, file in self.races:
             if item.text() == title:
-                self.mw.show(file)
+                self.mw.show(f"sqlite:///{file.absolute()}/")
                 self.close()
                 break

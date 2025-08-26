@@ -31,14 +31,10 @@ class MainWindow(QMainWindow):
         self.welcomewin = welcomewin.WelcomeWindow(self)
         self.welcomewin.show()
 
-    def show(self, fn):
+    def show(self, dbstr):
         super().show()
 
-        self.fn = fn
-
-        self.db = sqlalchemy.create_engine(
-            f"sqlite:///{self.fn.absolute()}/", max_overflow=-1
-        )
+        self.db = sqlalchemy.create_engine(dbstr, max_overflow=-1)
         models.Base.metadata.create_all(self.db)
 
         self.setWindowTitle(f"JJ ARDFEvent - {api.get_basic_info(self.db)["name"]}")
