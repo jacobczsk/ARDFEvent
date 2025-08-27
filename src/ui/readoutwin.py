@@ -191,7 +191,7 @@ class ReadoutWindow(QWidget):
 
         if (
             data["start"] or runners[0].startlist_time or datetime(1970, 1, 1)
-        ) - timedelta(hours=1) < data["check"]:
+        ) - timedelta(hours=1) > data["check"]:
             self.state_win.setError("CHECK ERROR")
             if (
                 QMessageBox.warning(
