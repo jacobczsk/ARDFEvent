@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from jinja2 import Environment, PackageLoader, select_autoescape
+from jinja2 import Environment, select_autoescape, FileSystemLoader
 from sqlalchemy import Select
 from sqlalchemy.orm import Session
 
@@ -32,9 +32,9 @@ def generate(db):
 
         runners = []
         for person in sess.scalars(
-            Select(Runner)
-            .where(Runner.startlist_time == minute)
-            .order_by(Runner.name.asc())
+                Select(Runner)
+                        .where(Runner.startlist_time == minute)
+                        .order_by(Runner.name.asc())
         ).all():
             runners.append(
                 {
@@ -56,7 +56,7 @@ def generate(db):
 
     sess.close()
 
-    env = Environment(loader=PackageLoader("exports"), autoescape=select_autoescape())
+    env = Environment(loader=FileSystemLoader(html_common.get_templates_path()), autoescape=select_autoescape())
     return env.get_template("startlist_minutes.html").render(
         event=html_common.get_event(db), minutes=minutes
     )

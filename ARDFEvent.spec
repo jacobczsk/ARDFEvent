@@ -1,7 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
 from PyInstaller.utils.hooks import collect_all
 
-datas = [('src/web/static', 'web/static/')]
+datas = [('src/web/static', 'web/static/'), ('src/exports/templates', 'exports/templates/')]
 binaries = []
 hiddenimports = []
 tmp_ret = collect_all('escpos')
@@ -33,14 +33,13 @@ exe = EXE(
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
-    console=True,
+    console=False,
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
     icon=['icons/icon.ico'],
-    hide_console='hide-early',
 )
 coll = COLLECT(
     exe,
