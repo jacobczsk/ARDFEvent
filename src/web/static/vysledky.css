@@ -82,3 +82,12 @@ td {
     font-size: 5rem;
     font-weight: bold;
 }
+
+.place {
+    text-align: center;
+}
+
+.time,
+.tx {
+    text-align: right;
+}

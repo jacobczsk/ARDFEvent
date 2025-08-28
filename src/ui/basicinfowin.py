@@ -49,7 +49,10 @@ class BasicInfoWindow(QWidget):
             self.mw.db,
             {
                 "name": self.name_edit.text(),
-                "date_tzero": self.date_edit.dateTime().toPython().isoformat(),
+                "date_tzero": self.date_edit.dateTime()
+                .toPython()
+                .replace(second=0)
+                .isoformat(),
                 "organizer": self.org_edit.text(),
                 "limit": str(self.limit_edit.value()),
                 "band": self.band_select.currentText(),

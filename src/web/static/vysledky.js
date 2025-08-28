@@ -73,19 +73,19 @@ async function mainProc() {
             let results = await get(`/api/results?category=${cat}`);
             results_elem.innerHTML = "";
 
-            results.sort(compare);
+            // results.sort(compare);
 
             if (results.length == 0) {
                 ann_elem.style.display = "flex";
                 ann_elem.children[0].textContent = "NIKDO 🙈";
             } else {
                 for (const result of results) {
-                    const place = result.place > 0 ? `${result.place}.` : result.status;
+                    let place = result.place > 0 ? result.place > 4 ? `${result.place}.` : ["🥇", "🥈", "🥉", "🥔"][result.place - 1] : result.time == "UNS" ? "🛌🏿" : result.status == "?" ? "🏃🏾‍➡️" : result.status;
                     const in_forest = result.status == "?";
                     const show_info = ["OK", "OVT", "MP"].includes(result.status);
                     const ok = result.status == "OK";
                     const order = result.order.map((x) => `<b>${x[0]}</b> - ${x[1]}`).join(", ");
-                    results_elem.innerHTML += `<tr><td><b>${place}</b></td><td><b>${result.name}${result.index == "ELB0904" ? " 👨‍💻" : ""}</b></td><td>${result.index}</td><td><b>${!ok && show_info ? `<span class="invalid">` : ""}${in_forest ? `<span class="temp_res">` : ""}${show_info || in_forest ? result.time : "-"}${in_forest ? "</span>" : ""}${!ok && show_info ? `</span>` : ""}</b></td><td><b>${!ok && show_info ? `<span class="invalid">` : ""}${show_info ? `${result.tx} TX` : "-"}${!ok && show_info ? `</span>` : ""}</b></td><td>${!ok && show_info ? `<span class="invalid">` : ""}${show_info ? order : ""}${!ok && show_info ? `</span>` : ""}</td></tr>`
+                    results_elem.innerHTML += `<tr><td class="place"><b>${place}</b></td><td><b>${result.name}${result.index == "ELB0904" ? " 👨‍💻" : ""}</b></td><td>${result.index}</td><td class="time"><b>${!ok && show_info ? `<span class="invalid">` : ""}${in_forest ? `<span class="temp_res">` : ""}${!(show_info || in_forest) ? "" : result.time == "UNS" ? `S: ${result.start}` : result.time}${in_forest ? "</span>" : ""}${!ok && show_info ? `</span>` : ""}</b></td><td class="tx"><b>${!ok && show_info ? `<span class="invalid">` : ""}${show_info ? `${result.tx} TX` : "-"}${!ok && show_info ? `</span>` : ""}</b></td><td>${!ok && show_info ? `<span class="invalid">` : ""}${show_info ? order : ""}${!ok && show_info ? `</span>` : ""}</td></tr>`
                 }
             }
             await sleep(200);
