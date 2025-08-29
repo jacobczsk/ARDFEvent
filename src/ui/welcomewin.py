@@ -12,11 +12,12 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QPushButton,
     QVBoxLayout,
-    QWidget,
+    QWidget, QMenu,
 )
 
 import api
 import models
+from helpers.stages import StagesHelperWindow
 
 
 class WelcomeWindow(QWidget):
@@ -52,6 +53,15 @@ class WelcomeWindow(QWidget):
         dbstr_btn = QPushButton("Vlastní DB string")
         dbstr_btn.clicked.connect(self._custom_dbstr)
         lay.addWidget(dbstr_btn)
+
+        self.stage_helper = StagesHelperWindow()
+
+        helpers_menu = QMenu(self)
+        helpers_menu.addAction("Etapový závod", self.stage_helper.show)
+
+        helpers_btn = QPushButton("Nástroje")
+        helpers_btn.setMenu(helpers_menu)
+        lay.addWidget(helpers_btn)
 
         self.races_list = QListWidget()
         self.races_list.itemDoubleClicked.connect(self._open_race)
@@ -111,13 +121,13 @@ class WelcomeWindow(QWidget):
         if not item:
             return
         if (
-            QMessageBox.critical(
-                self,
-                "Smazat závod",
-                f"Opravdu chcete smazat závod {item.text()}?",
-                QMessageBox.Yes | QMessageBox.No,
-            )
-            == QMessageBox.Yes
+                QMessageBox.critical(
+                    self,
+                    "Smazat závod",
+                    f"Opravdu chcete smazat závod {item.text()}?",
+                    QMessageBox.Yes | QMessageBox.No,
+                )
+                == QMessageBox.Yes
         ):
             for title, file in self.races:
                 if item.text() == title:
