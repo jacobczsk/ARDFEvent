@@ -2,6 +2,7 @@ from datetime import datetime
 from pathlib import Path
 
 import sqlalchemy
+from PySide6.QtCore import QSize, Qt
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import (
     QHBoxLayout,
@@ -35,7 +36,8 @@ class WelcomeWindow(QWidget):
         logolay.addStretch()
 
         img_lbl = QLabel()
-        img_lbl.setPixmap(QPixmap(":/icons/icon.png").scaled(150, 150))
+        img_lbl.setPixmap(
+            QPixmap(":/icons/icon.png").scaled(QSize(300, 300), Qt.AspectRatioMode.KeepAspectRatioByExpanding))
         logolay.addWidget(img_lbl)
 
         logolay.addStretch()

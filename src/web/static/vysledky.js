@@ -3,7 +3,7 @@ const usp = new URLSearchParams(new URL(window.location).search);
 let cats = new Array();
 
 for (const [key, val] of usp) {
-    if (key == "categories") {
+    if (key === "categories") {
         cats.push(val);
     }
 }
@@ -26,16 +26,16 @@ async function get(url) {
 }
 
 function compare(a, b) {
-    if (a.place != 0 && b.place != 0) {
+    if (a.place !== 0 && b.place !== 0) {
         return a.place - b.place;
     }
-    if (a.status == "?" && b.status == "?") {
+    if (a.status === "?" && b.status === "?") {
         return a.name > b.name;
     }
-    if (a.status == "?" && b.status != "OK") {
+    if (a.status === "?" && b.status !== "OK") {
         return -1;
     }
-    if (a.status != "OK" && b.status == "?") {
+    if (a.status !== "OK" && b.status === "?") {
         return 1;
     }
 }
@@ -75,26 +75,26 @@ async function mainProc() {
 
             // results.sort(compare);
 
-            if (results.length == 0) {
+            if (results.length === 0) {
                 ann_elem.style.display = "flex";
                 ann_elem.children[0].textContent = "NIKDO 🙈";
             } else {
                 for (const result of results) {
-                    let place = result.place > 0 ? result.place > 4 ? `${result.place}.` : ["🥇", "🥈", "🥉", "🥔"][result.place - 1] : result.time == "UNS" ? "🛌🏿" : result.status == "?" ? "🏃🏾‍➡️" : result.status;
-                    const in_forest = result.status == "?";
+                    let place = result.place > 0 ? result.place > 4 ? `${result.place}.` : ["🥇", "🥈", "🥉", "🥔"][result.place - 1] : result.time === "UNS" ? "🛌🏿" : result.status === "?" ? "🏃🏾‍➡️" : result.status;
+                    const in_forest = result.status === "?";
                     const show_info = ["OK", "OVT", "MP"].includes(result.status);
-                    const ok = result.status == "OK";
+                    const ok = result.status === "OK";
                     const order = result.order.map((x) => `<b>${x[0]}</b> - ${x[1]}`).join(", ");
-                    results_elem.innerHTML += `<tr><td class="place"><b>${place}</b></td><td><b>${result.name}${result.index == "ELB0904" ? " 👨‍💻" : ""}</b></td><td>${result.index}</td><td class="time"><b>${!ok && show_info ? `<span class="invalid">` : ""}${in_forest ? `<span class="temp_res">` : ""}${!(show_info || in_forest) ? "" : result.time == "UNS" ? `S: ${result.start}` : result.time}${in_forest ? "</span>" : ""}${!ok && show_info ? `</span>` : ""}</b></td><td class="tx"><b>${!ok && show_info ? `<span class="invalid">` : ""}${show_info ? `${result.tx} TX` : "-"}${!ok && show_info ? `</span>` : ""}</b></td><td>${!ok && show_info ? `<span class="invalid">` : ""}${show_info ? order : ""}${!ok && show_info ? `</span>` : ""}</td></tr>`
+                    results_elem.innerHTML += `<tr><td class="place"><b>${place}</b></td><td><b>${result.name}${result.index === "ELB0904" ? " 👨🏿‍💻" : result.index === "AFK1003" ? " 🎨" : ""}</b></td><td>${result.index}</td><td class="time"><b>${!ok && show_info ? `<span class="invalid">` : ""}${in_forest ? `<span class="temp_res">` : ""}${!(show_info || in_forest) ? "" : result.time === "UNS" ? `S: ${result.start}` : result.time}${in_forest ? "</span>" : ""}${!ok && show_info ? `</span>` : ""}</b></td><td class="tx"><b>${!ok && show_info ? `<span class="invalid">` : ""}${show_info ? `${result.tx} TX` : "-"}${!ok && show_info ? `</span>` : ""}</b></td><td>${!ok && show_info ? `<span class="invalid">` : ""}${show_info ? order : ""}${!ok && show_info ? `</span>` : ""}</td></tr>`
                 }
             }
             await sleep(200);
-            let time = results.length == 0 ? 1500 : Math.max(5000, results.length * 750);
+            let time = results.length === 0 ? 1500 : Math.max(5000, results.length * 750);
             document.querySelector("#progress-bar").style = `transition: width ${time / 1000}s linear; width: 100%;`;
             await sleep(time);
         }
         let announcement = await get(`/api/announcement`);
-        if (announcement != "") {
+        if (announcement !== "") {
             results_elem.innerHTML = "";
             ann_elem.children[0].innerHTML = announcement;
             document.querySelector("#cat-name").textContent = "HLÁŠENÍ";
