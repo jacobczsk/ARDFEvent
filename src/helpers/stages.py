@@ -116,7 +116,7 @@ class StagesHelperWindow(QWidget):
         with open(fn, "w") as f:
             csvw = csv.writer(f, delimiter=";")
             csvw.writerows(
-                [["Děkujemi, že k datům uvádíte atribuci:",
+                [["Děkuji, že k datům uvádíte atribuci:",
                   '"Data pocházejí ze StageHelper pro ARDFEvent, (C) Jakub Jiroutek"'],
                  []])
 
