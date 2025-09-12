@@ -9,7 +9,7 @@
 project = "JJ ARDFEvent"
 copyright = "2025, Jakub Jiroutek"
 author = "Jakub Jiroutek"
-release = "0.9-beta1"
+release = "1.0-beta1"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -29,5 +29,6 @@ html_show_sourcelink = False
 
 html_theme = "furo"
 html_static_path = ["_static"]
+html_logo = "_static/logo.svg"
 
 extensions = ["sphinx.ext.autosectionlabel"]
