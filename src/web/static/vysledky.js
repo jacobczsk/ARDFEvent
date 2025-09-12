@@ -25,39 +25,6 @@ async function get(url) {
     }
 }
 
-function compare(a, b) {
-    if (a.place !== 0 && b.place !== 0) {
-        return a.place - b.place;
-    }
-    if (a.status === "?" && b.status === "?") {
-        return a.name > b.name;
-    }
-    if (a.status === "?" && b.status !== "OK") {
-        return -1;
-    }
-    if (a.status !== "OK" && b.status === "?") {
-        return 1;
-    }
-}
-
-function animateProgress($progressBar, val, currentVal) {
-    currentVal = currentVal || 0;
-
-    var step = val * 16 / 500;
-
-    function animate(currentVal) {
-        currentVal += step;
-
-        $progressBar.val(currentVal);
-
-        currentVal < val && requestAnimationFrame(function () {
-            animate(currentVal);
-        });
-    }
-
-    animate(currentVal);
-}
-
 async function mainProc() {
     document.body.requestFullscreen();
     document.querySelector("#categories").innerHTML = cats.join(", ");
@@ -72,8 +39,6 @@ async function mainProc() {
             document.querySelector("#cat-controls").textContent = online_cats[cat];
             let results = await get(`/api/results?category=${cat}`);
             results_elem.innerHTML = "";
-
-            // results.sort(compare);
 
             if (results.length === 0) {
                 ann_elem.style.display = "flex";
@@ -94,16 +59,30 @@ async function mainProc() {
             await sleep(time);
         }
         let announcement = await get(`/api/announcement`);
-        if (announcement !== "") {
+        console.log(announcement);
+        if (announcement.ann !== "") {
             results_elem.innerHTML = "";
-            ann_elem.children[0].innerHTML = announcement;
+            ann_elem.children[0].innerHTML = announcement.ann;
             document.querySelector("#cat-name").textContent = "HLÁŠENÍ";
             document.querySelector("#cat-controls").textContent = "";
             ann_elem.style.display = "flex";
-            document.querySelector("#progress-bar").style = "transition: width .2ss; width: 0%;"
+            document.querySelector("#progress-bar").style = "transition: width .2s; width: 0%;"
             await sleep(200);
-            document.querySelector("#progress-bar").style = `transition: width ${10}s linear; width: 100%;`;
+            document.querySelector("#progress-bar").style = `transition: width 10s linear; width: 100%;`;
             await sleep(10000);
+            ann_elem.style.display = "none";
+        }
+
+        if (announcement.robis !== "") {
+            results_elem.innerHTML = "";
+            ann_elem.children[0].innerHTML = `ŽIVÉ VÝSLEDKY I NA ROBISU<br><img src="robisqr.png">`
+            document.querySelector("#cat-name").textContent = "ROBis";
+            document.querySelector("#cat-controls").textContent = "";
+            ann_elem.style.display = "flex";
+            document.querySelector("#progress-bar").style = "transition: width .2s; width: 0%;"
+            await sleep(200);
+            document.querySelector("#progress-bar").style = `transition: width 7s linear; width: 100%;`;
+            await sleep(7000);
             ann_elem.style.display = "none";
         }
     }

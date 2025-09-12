@@ -11,6 +11,7 @@ from pyramid.response import Response
 from sqlalchemy import Select
 from sqlalchemy.orm import Session
 
+import api
 import results
 from models import Category
 
@@ -80,7 +81,7 @@ class ARDFEventServer:
 
     def get_announcement(self, request: Request):
         return Response(
-            json.dumps(self.announcement),
+            json.dumps({"ann": self.announcement, "robis": bool(api.get_basic_info(self.db)["robis_api"])}),
             content_type="application/json",
             charset="UTF-8",
         )
