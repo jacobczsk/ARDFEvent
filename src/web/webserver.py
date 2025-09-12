@@ -5,6 +5,7 @@ from pathlib import Path
 from wsgiref.simple_server import make_server
 
 from pyramid.config import Configurator
+from pyramid.httpexceptions import HTTPFound
 from pyramid.request import Request
 from pyramid.response import Response
 from sqlalchemy import Select
@@ -95,6 +96,9 @@ class ARDFEventServer:
                     else str(Path(sys._MEIPASS) / "web" / "static")
                 ),
             )
+
+            config.add_route("home", "/")
+            config.add_view(lambda x, y: HTTPFound(location="/static/setup.html"), route_name="home")
             config.add_route("results", "/api/results")
             config.add_view(self.results, route_name="results")
             config.add_route("categories", "/api/categories")

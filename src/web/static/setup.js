@@ -1,4 +1,5 @@
 getData();
+
 async function getData() {
     const url = "/api/categories";
     try {
@@ -9,6 +10,7 @@ async function getData() {
 
         const result = await response.json();
         const cats = document.querySelector("#categories");
+        cats.setAttribute("size", Object.keys(result).length.toString());
         for (const key of Object.keys(result)) {
             cats.innerHTML += `<option value="${key}">${key}</option>`
         }
