@@ -90,6 +90,8 @@ def calculate_category(db: Engine, name: str, include_unknown: bool = False):
         punches = sess.scalars(Select(Punch).where(Punch.si == runner.si)).all()
         order = []
 
+        now = datetime.now()
+
         if len(punches) == 0:
             if include_unknown:
                 results.append(
@@ -98,7 +100,13 @@ def calculate_category(db: Engine, name: str, include_unknown: bool = False):
                         runner.reg,
                         runner.si,
                         0,
-                        0 if not start else (datetime.now() - start).total_seconds(),
+                        (
+                            0
+                            if not start
+                            else (
+                                now - start if now > start else -(start - now)
+                            ).total_seconds()
+                        ),
                         "?",
                         [],
                         runner.club,
@@ -167,8 +175,10 @@ def calculate_category(db: Engine, name: str, include_unknown: bool = False):
         )
 
     ok = list(filter(lambda x: x.status == "OK", results))
-    nok = list(filter(lambda x: x.status != "OK", results))
-    nok.sort(key=lambda x: x.name)
+    running = list(filter(lambda x: x.status == "?", results))
+    running.sort(key=lambda x: -x.time)
+    nok = list(filter(lambda x: x.status not in ["OK", "?"], results))
+    nok.sort(key=lambda x: (x.status, x.name))
 
     i = 0
     lastplace = 0
@@ -189,7 +199,7 @@ def calculate_category(db: Engine, name: str, include_unknown: bool = False):
         lastplace = place
 
     final_results = ok
-
+    final_results += running
     final_results += nok
 
     sess.close()

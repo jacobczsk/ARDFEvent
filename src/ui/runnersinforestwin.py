@@ -48,16 +48,17 @@ class RunnersInForestWindow(QWidget):
 
     def _show(self):
         sess = Session(self.mw.db)
+        now = datetime.now()
         in_forest = sess.scalars(
             Select(Runner)
             .where(~Runner.manual_dns)
             .where(~Runner.manual_disk)
             .where(Runner.si.not_in(Select(Punch.si)))
+            .where(Runner.startlist_time < now)
             .order_by(Runner.reg)
             .order_by(Runner.name)
         ).all()
 
-        now = datetime.now()
         self.gen_label.setText(
             f"Generováno v {now.strftime("%H:%M:%S")}, {len(in_forest)} osob v lese"
         )

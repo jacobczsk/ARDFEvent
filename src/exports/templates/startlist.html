@@ -56,37 +56,37 @@
 </head>
 
 <body>
-    <h1>{{ event.name }}</h1>
-    <h2>Startovka</h2>
-    <span>Datum: {{ event.date }}<br>
+<h1>{{ event.name }}</h1>
+<h2>Startovka</h2>
+<span>Datum: {{ event.date }}<br>
         První start: {{ event.first_start }}<br>
         Pořadatel: {{ event.organizer }}<br>
         Limit: {{ event.limit }} min<br>
         Pásmo: {{ event.band }}
     </span>
-    <br><br>
-    <table>
-        <tbody>
-            {% for category in categories %}
-            <tr>
-                <td colspan="5">
-                    <h3 style="display: inline-block;">{{ category.name }}</h3>
-                    <span>{{ category.controls }}</span>
-                </td>
-            </tr>
-            {% for runner in category.runners %}
-            <tr>
-                <td>{{ runner.starttime_abs }}</td>
-                <td>{{ runner.starttime_rel }}</td>
-                <td>{{ runner.name }}</td>
-                <td>{{ runner.reg }}</td>
-                <td>{{ runner.si }}</td>
-            </tr>
-            {% endfor %}
-            {% endfor %}
-        </tbody>
-    </table>
-    <span id="footer">JJ ARDFEvent, (C) Jakub Jiroutek</span>
+<br><br>
+<table>
+    <tbody>
+    {% for category in categories %}
+    <tr>
+        <td colspan="5">
+            <h3 style="display: inline-block;">{{ category.name }}</h3>
+            <span>{{ category.controls }}</span>
+        </td>
+    </tr>
+    {% for runner in category.runners %}
+    <tr>
+        <td>{{ runner.starttime_abs }}</td>
+        <td>{{ runner.starttime_rel }}</td>
+        <td>{{ runner.name }}</td>
+        <td>{{ runner.reg }}</td>
+        <td>{{ runner.si }}</td>
+    </tr>
+    {% endfor %}
+    {% endfor %}
+    </tbody>
+</table>
+<span id="footer">JJ ARDFEvent, &copy; Jakub Jiroutek</span>
 </body>
 
 </html>

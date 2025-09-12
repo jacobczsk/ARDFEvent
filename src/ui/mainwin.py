@@ -1,12 +1,9 @@
-import sys
-
 import sqlalchemy
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QMainWindow, QTabWidget
 
 import api
 import models
-import ui.resources as resources
 from ui import (
     basicinfowin,
     categorieswin,
@@ -29,7 +26,6 @@ class MainWindow(QMainWindow):
         super().__init__()
 
         self.welcomewin = welcomewin.WelcomeWindow(self)
-        self.welcomewin.show()
 
     def show(self, dbstr):
         super().show()

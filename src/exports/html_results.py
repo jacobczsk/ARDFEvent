@@ -1,6 +1,6 @@
 from datetime import timedelta
 
-from jinja2 import Environment, PackageLoader, select_autoescape
+from jinja2 import Environment, FileSystemLoader, select_autoescape
 from sqlalchemy import Select
 from sqlalchemy.orm import Session
 
@@ -14,7 +14,7 @@ def export(filename, db, splits=False):
         filename += ".html"
 
     with open(filename, "w+") as f:
-        f.write(generate(db, splints=splits))
+        f.write(generate(db, splits=splits))
 
 
 def generate(db, splits=False):
@@ -86,7 +86,9 @@ def generate(db, splits=False):
 
     sess.close()
 
-    env = Environment(loader=PackageLoader("exports"), autoescape=select_autoescape())
+    env = Environment(
+        loader=FileSystemLoader(html_common.get_templates_path()), autoescape=select_autoescape()
+    )
     return env.get_template("results.html").render(
         event=html_common.get_event(db), categories=categories, splits=splits
     )

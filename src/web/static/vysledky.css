@@ -3,11 +3,6 @@
     font-size: 1.55rem;
 }
 
-html,
-body {
-    width: 100%;
-}
-
 body {
     display: flex;
     flex-direction: column;
@@ -57,12 +52,9 @@ td {
 
 #logo {
     position: fixed;
-    right: .5em;
-    top: .5em;
-}
-
-#logo img {
-    height: 3.7rem;
+    right: 0;
+    bottom: 0;
+    height: 8rem;
 }
 
 .invalid {
@@ -81,4 +73,13 @@ td {
     text-align: center;
     font-size: 5rem;
     font-weight: bold;
+}
+
+.place {
+    text-align: center;
+}
+
+.time,
+.tx {
+    text-align: right;
 }

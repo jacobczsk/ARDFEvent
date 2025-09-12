@@ -1,8 +1,6 @@
-import os
 import time
 from datetime import datetime, timedelta
 
-from escpos.printer import Serial
 from PySide6.QtCore import QThread, QUrl, Signal
 from PySide6.QtGui import QCloseEvent, Qt
 from PySide6.QtMultimedia import QSoundEffect
@@ -21,6 +19,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+from escpos.printer import Serial
 from serial.tools.list_ports import comports
 from sportident import SIReaderReadout
 from sqlalchemy import Delete, Select
@@ -103,9 +102,9 @@ class ReadoutWindow(QWidget):
         lay.addWidget(self.log)
 
     def _show_si_error(self):
-        self.state_win.setError("CHYBA SI")
+        self.state_win.set_error("CHYBA SI")
         QMessageBox.critical(self, "Chyba", "Zkuste to znovu")
-        self.state_win.setError(None)
+        self.state_win.set_error(None)
 
     def _toggle_readout(self):
         if self.proc:
@@ -119,7 +118,7 @@ class ReadoutWindow(QWidget):
             self.proc.start()
 
             self.state_win.show()
-            self.state_win.setPorts(
+            self.state_win.set_ports(
                 self.siport_edit.currentText(), self.printer_edit.currentText()
             )
 
@@ -154,7 +153,7 @@ class ReadoutWindow(QWidget):
         runners = sess.scalars(Select(Runner).where(Runner.si == si_no)).all()
 
         if len(runners) == 0:
-            self.state_win.setError("NENALEZEN ČIP")
+            self.state_win.set_error("NENALEZEN ČIP")
             all_runners = map(lambda x: x.name, sess.scalars(Select(Runner)).all())
 
             inpd = QInputDialog()
@@ -170,7 +169,7 @@ class ReadoutWindow(QWidget):
                 inpd.exec() == QDialog.Accepted,
                 inpd.textValue(),
             )
-            self.state_win.setError(None)
+            self.state_win.set_error(None)
 
             if ok:
                 try:
@@ -190,51 +189,51 @@ class ReadoutWindow(QWidget):
             runner = runners[0]
 
         if (
-            data["start"] or runners[0].startlist_time or datetime(1970, 1, 1)
-        ) - timedelta(hours=1) < data["check"]:
-            self.state_win.setError("CHECK ERROR")
+                data["start"] or runners[0].startlist_time or datetime(1970, 1, 1)
+        ) - timedelta(hours=1) > data["check"]:
+            self.state_win.set_error("CHECK ERROR")
             if (
-                QMessageBox.warning(
-                    self,
-                    "Chyba",
-                    f"Čip {si_no} nemá CHECK - je nejspíše nevymazaný. Pokračovat?",
-                    QMessageBox.StandardButton.Yes,
-                    QMessageBox.StandardButton.No,
-                )
-                == QMessageBox.StandardButton.Yes
+                    QMessageBox.warning(
+                        self,
+                        "Chyba",
+                        f"Čip {si_no} nemá CHECK - je nejspíše nevymazaný. Pokračovat?",
+                        QMessageBox.StandardButton.Yes,
+                        QMessageBox.StandardButton.No,
+                    )
+                    == QMessageBox.StandardButton.Yes
             ):
-                self.state_win.setError(None)
+                self.state_win.set_error(None)
             else:
                 self._append_log(f"Zrušeno vyčtení.")
                 sess.close()
-                self.state_win.setError(None)
+                self.state_win.set_error(None)
                 return
 
         sess.scalars(Select(Runner).where(Runner.si == si_no)).one().manual_dns = False
 
         if len(sess.scalars(Select(Punch).where(Punch.si == si_no)).all()) != 0:
-            self.state_win.setError("JIŽ VYČTENÝ ČIP")
+            self.state_win.set_error("JIŽ VYČTENÝ ČIP")
             if (
-                QMessageBox.warning(
-                    self,
-                    "Chyba",
-                    f"Čip {si_no} byl již vyčten. Přepsat?",
-                    QMessageBox.StandardButton.Yes,
-                    QMessageBox.StandardButton.No,
-                )
-                == QMessageBox.StandardButton.Yes
+                    QMessageBox.warning(
+                        self,
+                        "Chyba",
+                        f"Čip {si_no} byl již vyčten. Přepsat?",
+                        QMessageBox.StandardButton.Yes,
+                        QMessageBox.StandardButton.No,
+                    )
+                    == QMessageBox.StandardButton.Yes
             ):
                 self._append_log(f"Přepsán předchozí zápis.")
                 sess.execute(Delete(Punch).where(Punch.si == si_no))
-                self.state_win.setError(None)
+                self.state_win.set_error(None)
             else:
                 self._append_log(f"Zrušeno vyčtení.")
                 sess.close()
-                self.state_win.setError(None)
+                self.state_win.set_error(None)
                 return
 
         self._append_log(f"Závodník: {runner.name} ({runner.reg}).")
-        self.state_win.setRunner(
+        self.state_win.set_runner(
             f"{runner.name} ({runner.reg}), {runner.category.name}"
         )
 
@@ -253,15 +252,15 @@ class ReadoutWindow(QWidget):
         if self.printer:
             print_readout(self.mw.db, si_no, self.printer)
             if (
-                self.double_print_chk.isChecked()
-                and QMessageBox.warning(
-                    self,
-                    "Dvojtisk",
-                    "Tisknout podruhé?",
-                    QMessageBox.StandardButton.Ok,
-                    QMessageBox.StandardButton.Abort,
-                )
-                == QMessageBox.StandardButton.Ok
+                    self.double_print_chk.isChecked()
+                    and QMessageBox.warning(
+                self,
+                "Dvojtisk",
+                "Tisknout podruhé?",
+                QMessageBox.StandardButton.Ok,
+                QMessageBox.StandardButton.Abort,
+            )
+                    == QMessageBox.StandardButton.Ok
             ):
                 print_readout(self.mw.db, si_no, self.printer, True)
 
@@ -465,17 +464,17 @@ class ReadoutStatusWindow(QWidget):
         self.effect.setLoopCount(-2)
         self.effect.setVolume(1.0)
 
-        self.setError(None)
+        self.set_error(None)
 
-    def setPorts(self, si: str, printer: str):
+    def set_ports(self, si: str, printer: str):
         self.mainstate_label.setText(f"Stav: Aktivní, SI: {si}, tiskárna: {printer}")
         self.mainstate_label.setStyleSheet("color: green;")
 
-    def setRunner(self, runner: str):
+    def set_runner(self, runner: str):
         self.runner_label.setText(runner)
         self.time_label.setText(f"Vyčten v: {datetime.now().strftime("%H:%M:%S")}")
 
-    def setError(self, error: str | None):
+    def set_error(self, error: str | None):
         if error:
             self.error_label.setText(error)
             self.error_label.setStyleSheet(

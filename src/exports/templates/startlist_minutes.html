@@ -56,34 +56,34 @@
 </head>
 
 <body>
-    <h1>{{ event.name }}</h1>
-    <h2>Startovka po minutách</h2>
-    <br>
-    <table>
-        <tbody>
-            {% for minute in minutes %}
-            <tr>
-                <td colspan="4">
-                    <hr>
-                </td>
-            </tr>
-            <tr>
-                <td colspan="4">
-                    <h3 style="display: inline-block;">{{ minute.abs }} / {{ minute.rel }}</h3>
-                </td>
-            </tr>
-            {% for runner in minute.runners %}
-            <tr>
-                <td>{{ runner.category }}</td>
-                <td>{{ runner.name }}</td>
-                <td>{{ runner.reg }}</td>
-                <td>{{ runner.si }}</td>
-            </tr>
-            {% endfor %}
-            {% endfor %}
-        </tbody>
-    </table>
-    <span id="footer">JJ ARDFEvent, (C) Jakub Jiroutek</span>
+<h1>{{ event.name }}</h1>
+<h2>Startovka po minutách</h2>
+<br>
+<table>
+    <tbody>
+    {% for minute in minutes %}
+    <tr>
+        <td colspan="4">
+            <hr>
+        </td>
+    </tr>
+    <tr>
+        <td colspan="4">
+            <h3 style="display: inline-block;">{{ minute.abs }} / {{ minute.rel }}</h3>
+        </td>
+    </tr>
+    {% for runner in minute.runners %}
+    <tr>
+        <td>{{ runner.category }}</td>
+        <td>{{ runner.name }}</td>
+        <td>{{ runner.reg }}</td>
+        <td>{{ runner.si }}</td>
+    </tr>
+    {% endfor %}
+    {% endfor %}
+    </tbody>
+</table>
+<span id="footer">JJ ARDFEvent, &copy; Jakub Jiroutek</span>
 </body>
 
 </html>

@@ -1,7 +1,15 @@
+import sys
+from pathlib import Path
+
 from dateutil.parser import parser
 from sqlalchemy import Engine
 
 import api
+
+
+def get_templates_path():
+    return ((Path(__file__).parent / "templates").absolute()) if not getattr(sys, "frozen", False) else str(
+        Path(sys._MEIPASS) / "exports" / "templates")
 
 
 def get_event(db: Engine):

@@ -1,15 +1,17 @@
 import json
+import sys
 from datetime import datetime, timedelta
 from pathlib import Path
-import sys
 from wsgiref.simple_server import make_server
 
 from pyramid.config import Configurator
+from pyramid.httpexceptions import HTTPFound
 from pyramid.request import Request
 from pyramid.response import Response
 from sqlalchemy import Select
 from sqlalchemy.orm import Session
 
+import api
 import results
 from models import Category
 
@@ -45,10 +47,14 @@ class ARDFEventServer:
                 "club": res.club,
                 "index": res.reg,
                 "si": res.si,
-                "time": results.format_delta(timedelta(seconds=res.time)),
+                "time": (
+                    results.format_delta(timedelta(seconds=res.time))
+                    if res.time > 0
+                    else "UNS"
+                ),
                 "tx": res.tx,
                 "status": res.status,
-                "start": (res.start or datetime.now()).isoformat(),
+                "start": (res.start or datetime.now()).strftime("%H:%M:%S"),
                 "order": order_to_resp(res.order, res.start),
             }
 
@@ -75,7 +81,7 @@ class ARDFEventServer:
 
     def get_announcement(self, request: Request):
         return Response(
-            json.dumps(self.announcement),
+            json.dumps({"ann": self.announcement, "robis": bool(api.get_basic_info(self.db)["robis_api"])}),
             content_type="application/json",
             charset="UTF-8",
         )
@@ -84,8 +90,16 @@ class ARDFEventServer:
         with Configurator() as config:
             config.add_route("static", "/static")
             config.add_static_view(
-                name="static", path=str((Path(__file__).parent / "static").absolute()) if not getattr(sys, 'frozen', False) else str(Path(sys._MEIPASS) / "web" / "static")
+                name="static",
+                path=(
+                    str((Path(__file__).parent / "static").absolute())
+                    if not getattr(sys, "frozen", False)
+                    else str(Path(sys._MEIPASS) / "web" / "static")
+                ),
             )
+
+            config.add_route("home", "/")
+            config.add_view(lambda x, y: HTTPFound(location="/static/setup.html"), route_name="home")
             config.add_route("results", "/api/results")
             config.add_view(self.results, route_name="results")
             config.add_route("categories", "/api/categories")
