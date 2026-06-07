@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (
 )
 
 import api
+import migrations
 import models
 import routes
 from exports import base_reports
@@ -231,6 +232,7 @@ class MainWindow(QMainWindow):
             self._push_last(dbstr)
 
         if self.racewin:
+            self.racewin.db.dispose()
             self.racewin.deleteLater()
             self.racewin = None
 
@@ -281,6 +283,8 @@ class RaceWindow(QWidget):
             self.db = sqlalchemy.create_engine(dbstr)
 
         models.Base.metadata.create_all(self.db)
+
+        migrations.migrate(dbstr)
 
         api.migrate_basic_info(self.db)
 
@@ -336,22 +340,23 @@ class RaceWindow(QWidget):
                       qta.icon("mdi6.information-outline"))
         self.add_page(self.controls_win, QCoreApplication.translate("MainWindow", "Kontroly"),
                       qta.icon("mdi6.antenna"))
+        self.add_page(self.map_win, QCoreApplication.translate("MainWindow", "Mapa"),
+                      qta.icon("mdi6.map-outline"))
         self.add_page(self.categories_win, QCoreApplication.translate("MainWindow", "Kategorie"),
                       qta.icon("mdi6.account-group-outline"))
         # self.add_page(self.import_win, QCoreApplication.translate("MainWindow", "Import"), qta.icon("mdi6.import"))
         self.add_page(self.runners_win, QCoreApplication.translate("MainWindow", "Běžci"), qta.icon("mdi6.run"))
-        self.add_page(self.readout_win, QCoreApplication.translate("MainWindow", "Vyčítání"),
-                      qta.icon("mdi6.cable-data"))
+
         self.add_page(self.startlist_win, QCoreApplication.translate("MainWindow", "Startovka"),
                       qta.icon("mdi6.timer-outline"))
+        self.add_page(self.readout_win, QCoreApplication.translate("MainWindow", "Vyčítání"),
+                      qta.icon("mdi6.cable-data"))
+        self.add_page(self.inforest_win, QCoreApplication.translate("MainWindow", "Závodníci v lese"),
+                      qta.icon("mdi6.pine-tree-variant-outline"))
         self.add_page(self.results_win, QCoreApplication.translate("MainWindow", "Výsledky"),
                       qta.icon("mdi6.trophy-outline"))
         self.add_page(self.reports_win, QCoreApplication.translate("MainWindow", "Sestavy"),
                       qta.icon("mdi6.file-chart-outline"))
-        self.add_page(self.inforest_win, QCoreApplication.translate("MainWindow", "Závodníci v lese"),
-                      qta.icon("mdi6.pine-tree-variant-outline"))
-        self.add_page(self.map_win, QCoreApplication.translate("MainWindow", "Mapa"),
-                      qta.icon("mdi6.map-outline"))
         # self.add_page(self.experimental_win, QCoreApplication.translate("MainWindow", "Experimentální"),
         #               qta.icon("mdi6.flask"))
 
@@ -430,6 +435,7 @@ class RaceWindow(QWidget):
 
     def closeEvent(self, event):
         super().closeEvent(event)
+        self.db.dispose()
         for win in self.windows:
             win.close()
 
