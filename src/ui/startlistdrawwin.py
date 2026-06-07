@@ -1,5 +1,6 @@
 import random
 from datetime import timedelta, datetime
+from typing import Counter
 
 from PySide6.QtCore import Qt, QPointF, QCoreApplication
 from PySide6.QtGui import QBrush, QColor, QPen, QPainter, QFontMetrics
@@ -11,6 +12,7 @@ from sqlalchemy import Select, Update
 from sqlalchemy.orm import Session
 
 import api
+import startlists
 from models import Category, Runner
 
 COLORS = [Qt.GlobalColor.red, Qt.GlobalColor.darkGreen, Qt.GlobalColor.darkBlue, Qt.GlobalColor.darkMagenta,
@@ -262,42 +264,28 @@ class StartlistDrawWindow(QWidget):
                 sess.scalars(Select(Runner).where(Runner.category == cat)).all()
             )
 
-            clubs_dict = {}
+            counts = Counter(obj.club for obj in runners)
+            groups = {}
+            for obj in runners:
+                groups.setdefault(obj['club'], []).append(obj)
 
-            for runner in runners:
-                if runner.club not in clubs_dict:
-                    clubs_dict[runner.club] = [runner]
-                else:
-                    clubs_dict[runner.club].append(runner)
+            for club in groups:
+                random.shuffle(groups[club])
 
-            clubs = list(clubs_dict.values())
-
-            clubs.sort(key=len, reverse=True)
-
-            i = 0
-            while len(clubs) != 0:
-                for club in clubs:
-                    random.shuffle(club)
-                    club[0].startlist_time = last
-                    last = club[0].startlist_time + baseint_delta
-                    club.pop(0)
-                    i += 1
-                while [] in clubs:
-                    clubs.remove([])
             sess.commit()
         return last
 
     def _draw(self):
         zero = datetime.fromisoformat(api.get_basic_info(self.mw.db)["date_tzero"])
-        with Session(self.mw.db) as sess:
-            for cls in self.scene.classes:
-                if cls.y() != 0:
-                    self.draw_category(cls.name, zero + timedelta(minutes=cls.time), timedelta(minutes=cls.interval))
-                else:
+        for cls in self.scene.classes:
+            if cls.y() != 0:
+                startlists.assign_times(self.mw.db, cls.name, zero + timedelta(minutes=cls.time),
+                                        timedelta(minutes=cls.interval), startlists.ardfevent_draw)
+            else:
+                with Session(self.mw.db) as sess:
                     sess.execute(Update(Runner).where(Runner.category.has(name=cls.name)).values(
                         startlist_time=None))
-
-            sess.commit()
+                    sess.commit()
 
         self.mw.startlist_win._update_startlist()
 
