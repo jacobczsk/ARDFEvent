@@ -76,3 +76,4 @@ class Punch(Base):
     code: Mapped[int]  # 1000 = start, 1001 = finish, 1002 = OCheckList
     si: Mapped[int]
     time: Mapped[datetime]
+    modified: Mapped[bool] = mapped_column(default=False)

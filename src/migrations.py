@@ -21,5 +21,11 @@ def migrate(dbstr):
     except:
         pass
 
+    try:
+        sess.execute(text("ALTER TABLE punches ADD COLUMN modified BOOLEAN NOT NULL DEFAULT false;"))
+        print("Migrated lat,lon:", dbstr)
+    except:
+        pass
+
     sess.commit()
     sess.close()

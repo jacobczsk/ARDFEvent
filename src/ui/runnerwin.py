@@ -12,13 +12,13 @@ from PySide6.QtWidgets import (
     QListWidgetItem,
     QSpinBox,
     QVBoxLayout,
-    QWidget, QInputDialog, QLabel, QFrame,
+    QWidget, QInputDialog, QLabel, QFrame, QDialog, QMessageBox,
 )
 from sqlalchemy import Delete, Select
 from sqlalchemy.orm import Session
 
 import api
-from models import Category, Runner
+from models import Category, Runner, Punch
 from ui.qtaiconbutton import QTAIconButton
 
 
@@ -85,6 +85,10 @@ class RunnerWindow(QWidget):
                                QCoreApplication.translate("RunnerWindow", "Změnit startovní čas"))
         st_btn.clicked.connect(self._set_starttime)
         btn_lay.addWidget(st_btn)
+
+        punches_btn = QTAIconButton("mdi6.view-grid-plus", QCoreApplication.translate("RunnerWindow", "Ražení"))
+        punches_btn.clicked.connect(self._open_punches_dialog)
+        btn_lay.addWidget(punches_btn)
 
         btn_lay.addStretch()
 
@@ -177,7 +181,7 @@ class RunnerWindow(QWidget):
             if runner:
                 runner.name = self.name_edit.text()
                 runner.club = self.club_edit.text()
-                runner.si = self.SI_edit.text()
+                runner.si = self.SI_edit.value()
                 runner.reg = self.reg_edit.text()
                 runner.startno = self.startno_edit.value() or None
 
@@ -318,6 +322,144 @@ class RunnerWindow(QWidget):
         except:
             ...
 
+    def _open_punches_dialog(self):
+        if not self.selected:
+            QMessageBox.warning(self, QCoreApplication.translate("RunnerWindow", "Chyba"),
+                                QCoreApplication.translate("RunnerWindow", "Vyberte závodníka nejdříve."))
+            return
+        dlg = RunnerPunchesDialog(self.mw, self.selected, parent=self)
+        dlg.exec()
+
+
+class RunnerPunchesDialog(QDialog):
+    def __init__(self, mw, runner_id: int, parent=None):
+        super().__init__(parent)
+        self.mw = mw
+        self.runner_id = runner_id
+
+        self.setWindowTitle(QCoreApplication.translate("RunnerWindow", "Ražení závodníka"))
+
+        lay = QVBoxLayout(self)
+
+        self.punches_list = QListWidget()
+        lay.addWidget(self.punches_list)
+
+        btn_lay = QHBoxLayout()
+        lay.addLayout(btn_lay)
+
+        add_btn = QTAIconButton("mdi6.plus-box-outline", QCoreApplication.translate("RunnerWindow", "Přidat"))
+        add_btn.clicked.connect(self._add_punch)
+        btn_lay.addWidget(add_btn)
+
+        edit_btn = QTAIconButton("mdi6.pencil", QCoreApplication.translate("RunnerWindow", "Upravit"))
+        edit_btn.clicked.connect(self._edit_punch)
+        btn_lay.addWidget(edit_btn)
+
+        del_btn = QTAIconButton("mdi6.delete", QCoreApplication.translate("RunnerWindow", "Smazat"))
+        del_btn.clicked.connect(self._delete_punch)
+        btn_lay.addWidget(del_btn)
+
+        close_btn = QTAIconButton("mdi6.close", QCoreApplication.translate("RunnerWindow", "Zavřít"))
+        close_btn.clicked.connect(self.accept)
+        btn_lay.addWidget(close_btn)
+
+        self._load_punches()
+
+    def _get_runner(self, sess: Session):
+        return sess.scalars(Select(Runner).where(Runner.id == self.runner_id)).one_or_none()
+
+    def _load_punches(self):
+        self.punches_list.clear()
+        with Session(self.mw.db) as sess:
+            runner = self._get_runner(sess)
+            if not runner:
+                return
+            if not runner.si:
+                QMessageBox.information(self, QCoreApplication.translate("RunnerWindow", "Žádné SI"),
+                                        QCoreApplication.translate("RunnerWindow", "Běžec nemá přiřazené SI."))
+                return
+            punches = sess.scalars(Select(Punch).where(Punch.si == runner.si).order_by(Punch.time)).all()
+            for p in punches:
+                text = f"{p.code if p.code not in [1000, 1001, 1002] else ["start", "cíl", "OChecklist"][p.code - 1000]} - {p.time.strftime('%Y-%m-%d %H:%M:%S')}"
+                if getattr(p, "modified", False):
+                    text += " (upraveno)"
+                item = QListWidgetItem(text)
+                item.setData(Qt.ItemDataRole.UserRole, p.id)
+                self.punches_list.addItem(item)
+
+    def _add_punch(self):
+        with Session(self.mw.db) as sess:
+            runner = self._get_runner(sess)
+            if not runner or not runner.si:
+                QMessageBox.warning(self, QCoreApplication.translate("RunnerWindow", "Chyba"),
+                                    QCoreApplication.translate("RunnerWindow", "Běžec nemá SI. Nejprve přiřaďte SI."))
+                return
+            code, ok = QInputDialog.getInt(self, QCoreApplication.translate("RunnerWindow", "Kód ražení"),
+                                           QCoreApplication.translate("RunnerWindow", "Zadejte kód ražení (číslo)"), 0)
+            if not ok:
+                return
+            timestr, ok = QInputDialog.getText(self, QCoreApplication.translate("RunnerWindow", "Čas"),
+                                               QCoreApplication.translate("RunnerWindow",
+                                                                          "Zadejte čas (HH:MM:SS)"),
+                                               text=datetime.now().strftime('%H:%M:%S'))
+            if not ok:
+                return
+            try:
+
+                ttime = datetime.strptime(timestr, "%H:%M:%S").time()
+                base_date = datetime.fromisoformat(api.get_basic_info(self.mw.db)["date_tzero"]).date()
+                t = datetime.combine(base_date, ttime)
+            except Exception:
+                QMessageBox.warning(self, QCoreApplication.translate("RunnerWindow", "Chybný čas"),
+                                    QCoreApplication.translate("RunnerWindow",
+                                                               "Neplatný formát času. Použijte HH:MM:SS."))
+                return
+            sess.add(Punch(si=runner.si, code=code, time=t, modified=True))
+            sess.commit()
+        self._load_punches()
+
+    def _edit_punch(self):
+        it = self.punches_list.currentItem()
+        if not it:
+            return
+        pid = it.data(Qt.ItemDataRole.UserRole)
+        with Session(self.mw.db) as sess:
+            punch = sess.get(Punch, pid)
+            if not punch:
+                return
+
+            timestr, ok = QInputDialog.getText(self, QCoreApplication.translate("RunnerWindow", "Čas"),
+                                               QCoreApplication.translate("RunnerWindow",
+                                                                          "Zadejte čas (HH:MM:SS)"),
+                                               text=punch.time.strftime('%H:%M:%S'))
+            if not ok:
+                return
+            try:
+                ttime = datetime.strptime(timestr, "%H:%M:%S").time()
+                t = datetime.combine(punch.time.date(), ttime)
+            except Exception:
+                QMessageBox.warning(self, QCoreApplication.translate("RunnerWindow", "Chybný čas"),
+                                    QCoreApplication.translate("RunnerWindow",
+                                                               "Neplatný formát času. Použijte HH:MM:SS."))
+                return
+            punch.time = t
+            punch.modified = True
+            sess.commit()
+        self._load_punches()
+
+    def _delete_punch(self):
+        it = self.punches_list.currentItem()
+        if not it:
+            return
+        if QMessageBox.question(self, QCoreApplication.translate("RunnerWindow", "Smazat"),
+                                QCoreApplication.translate("RunnerWindow",
+                                                           "Opravdu smazat vybrané ražení?")) != QMessageBox.StandardButton.Yes:
+            return
+        pid = it.data(Qt.ItemDataRole.UserRole)
+        with Session(self.mw.db) as sess:
+            sess.execute(Delete(Punch).where(Punch.id == pid))
+            sess.commit()
+        self._load_punches()
+
     def closeEvent(self, event):
-        self._save_runner()
         super().closeEvent(event)
