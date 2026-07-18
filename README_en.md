@@ -22,24 +22,24 @@
   </p>
 </div>
 
-This software is intended to be used on a computer/laptop with a mouse and keyboard. If you want software only for
-Android, use [kolskypavel/Radio-O-Manager](https://github.com/kolskypavel/Radio-O-Manager)
+This software is intended to be used on a computer/laptop with a mouse and a keyboard. For
+Android use [kolskypavel/Radio-O-Manager](https://github.com/kolskypavel/Radio-O-Manager).
 
 ## Program Features :toolbox:
 
-1.  [x] Data management (competitors, categories, controls)
-2.  [x] SI chip readout (all versions)
-3.  [x] Ticket printing on ESC-POS compatible printers (ticket for competitor and for string)
-4.  [x] 100% integration with ROBis (via open plugin)
+1.  [x] Race data management (competitors, categories, control points)
+2.  [x] SI card readout (all versions)
+3.  [x] Ticket printing on ESC-POS compatible printers (ticket for both competitor and leaderboard)
+4.  [x] 100% integration with ROBis (via an open plugin)
 5.  [x] Export results to various formats (CSV, HTML, IOF XML, ARDF JSON)
 6.  [x] Import competitors and categories from CSV
 7.  [x] Tracking competitors in the forest and their time limit expiration
-8.  [x] Multi-stage races (via open plugin)
+8.  [x] Multi-leg races (via open plugin)
 9.  [x] Web server for competitors at the finish line (in case of no mobile data at the finish)
 10. [x] Start numbers
-11. [x] Start list (including preventing consecutive starts of competitors from the same club in the same category)
+11. [x] Start list (including prevention of consecutive starts of competitors from the same club in the same category)
 12. [x] Integration with OChecklist
-13. [x] Merging controls
+13. [x] Merging control points
 14. [x] Multiplatform (Linux, Windows, macOS)
 15. [x] Localization (Czech, English)
 16. [x] Plugin system for feature extension
