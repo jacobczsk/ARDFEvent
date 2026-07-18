@@ -1,3 +1,5 @@
+#!/usr/bin/bash
+
 Color_Off='\033[0m'
 BYellow='\033[1;33m'
 BPurple='\033[1;35m'
